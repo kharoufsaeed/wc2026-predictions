@@ -878,9 +878,41 @@ const App = {
         </div>
       </div>
       <div class="admin-section">
+        <h3>Manage Pools</h3>
+        <p class="section-desc">Rename competition pools. This only updates the local name — data files in the repo keep their original path.</p>
+        <div id="pool-manage-list">
+          ${this.getCompetitions().map(c => `
+            <div class="pool-rename-row">
+              <span class="pool-current-name">${c}</span>
+              <input type="text" class="comp-input" id="pool-rename-${c}" placeholder="New name" value="${c}">
+              <button class="btn btn-secondary btn-small" onclick="App.renamePool('${c}')">Rename</button>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="admin-section">
         <h3>How to Enter Results</h3>
-        <p class="section-desc">As admin, use the <strong>Matches</strong> tab to enter actual match results directly on each match card. Use the <strong>General Predictions</strong> tab to enter actual tournament-wide results (Golden Boot, etc.).</p>
+        <p class="section-desc">Use the <strong>Matches</strong> tab to enter actual match results inline. Use the <strong>General Predictions</strong> tab to enter actual tournament-wide results.</p>
       </div>`;
+  },
+
+  renamePool(oldName) {
+    const newName = document.getElementById(`pool-rename-${oldName}`)?.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!newName || newName === oldName) return;
+    const comps = this.getCompetitions();
+    const idx = comps.indexOf(oldName);
+    if (idx === -1) return;
+    comps[idx] = newName;
+    this.saveCompetitions(comps);
+    if (this.currentCompetition === oldName) {
+      this.currentCompetition = newName;
+      LocalStorage.setCompetition(newName);
+    }
+    // Update pool selector in header
+    const select = document.getElementById('admin-pool-select');
+    if (select) {
+      select.innerHTML = comps.map(c => `<option value="${c}" ${c === this.currentCompetition ? 'selected' : ''}>${c.charAt(0).toUpperCase() + c.slice(1)}</option>`).join('');
+    }
+    this.renderAdmin();
   },
 
   saveGitHubConfig() {
