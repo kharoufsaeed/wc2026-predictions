@@ -36,10 +36,24 @@ body {
   width: 100%;
   height: 0;
   padding-bottom: 12%;
-  background: url('pictures/8b3a7cbf-911c-4809-a084-368496c1d04c.webp') center/contain no-repeat;
+  background: url('pictures/8b3a7cbf-911c-4809-a084-368496c1d04c.webp') 65% center/contain no-repeat;
   position: relative;
   display: block;
   overflow: hidden;
+}
+
+.site-banner h1 {
+  position: absolute;
+  top: 50%;
+  left: 4%;
+  transform: translateY(-50%);
+  color: white;
+  font-size: clamp(1.4rem, 3.5vw, 3rem);
+  font-weight: 800;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.45);
+  line-height: 1.2;
+  max-width: 40%;
+  z-index: 1;
 }
 .site-banner::before,
 .site-banner::after {
@@ -69,7 +83,7 @@ body {
   gap: 0.5rem;
 }
 
-.header h1 { font-size: 1.8rem; text-align: center; flex: 1; }
+.header h1 { display: none; }
 
 .user-info {
   display: flex;
@@ -496,6 +510,77 @@ body {
   font-weight: 600;
   color: var(--primary);
 }
+
+.pool-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  background: var(--bg);
+}
+
+.pool-add-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.members-section {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.members-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.4rem 0 0.6rem;
+  min-height: 1.5rem;
+}
+
+.no-members {
+  color: var(--text-light);
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+.member-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--primary);
+  color: white;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.chip-remove {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.8);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+}
+.chip-remove:hover { color: white; }
+
+.member-add-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-danger {
+  background: var(--accent);
+  color: white;
+  border: none;
+}
+.btn-danger:hover { background: var(--accent-light); }
 
 .score-row {
   display: flex;

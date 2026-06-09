@@ -879,14 +879,35 @@ const App = {
       </div>
       <div class="admin-section">
         <h3>Manage Pools</h3>
-        <p class="section-desc">Rename competition pools. This only updates the local name — data files in the repo keep their original path.</p>
+        <p class="section-desc">Add, rename, or remove pools and manage their members.</p>
+        <div class="pool-add-row">
+          <input type="text" class="comp-input" id="admin-new-pool-name" placeholder="New pool name">
+          <button class="btn btn-primary btn-small" onclick="App.addPoolFromAdmin()">+ Add Pool</button>
+        </div>
         <div id="pool-manage-list">
-          ${this.getCompetitions().map(c => `
-            <div class="pool-rename-row">
-              <span class="pool-current-name">${c}</span>
-              <input type="text" class="comp-input" id="pool-rename-${c}" placeholder="New name" value="${c}">
-              <button class="btn btn-secondary btn-small" onclick="App.renamePool('${c}')">Rename</button>
-            </div>`).join('')}
+          ${this.getCompetitions().map(c => {
+            const members = this.getPoolMembers(c);
+            return `
+            <div class="pool-card">
+              <div class="pool-rename-row">
+                <span class="pool-current-name">${c.charAt(0).toUpperCase() + c.slice(1)}</span>
+                <input type="text" class="comp-input" id="pool-rename-${c}" placeholder="New name" value="${c}">
+                <button class="btn btn-secondary btn-small" onclick="App.renamePool('${c}')">Rename</button>
+                <button class="btn btn-danger btn-small" onclick="App.removePool('${c}')">Remove</button>
+              </div>
+              <div class="members-section">
+                <strong>Members (${members.length}):</strong>
+                <div class="members-list">
+                  ${members.length === 0 ? '<span class="no-members">No members yet</span>' :
+                    members.map(m => `<span class="member-chip">${m} <button class="chip-remove" onclick="App.removeMember('${c}','${m}')" title="Remove">×</button></span>`).join('')}
+                </div>
+                <div class="member-add-row">
+                  <input type="text" class="comp-input" id="member-add-${c}" placeholder="Add member name">
+                  <button class="btn btn-secondary btn-small" onclick="App.addMember('${c}')">+ Add</button>
+                </div>
+              </div>
+            </div>`;
+          }).join('')}
         </div>
       </div>
       <div class="admin-section">
@@ -908,11 +929,69 @@ const App = {
       LocalStorage.setCompetition(newName);
     }
     // Update pool selector in header
+    this._refreshHeaderPoolSelector(comps);
+    this.renderAdmin();
+  },
+
+  addPoolFromAdmin() {
+    const input = document.getElementById('admin-new-pool-name');
+    const name = input.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!name) return alert('Enter a valid pool name');
+    const comps = this.getCompetitions();
+    if (comps.includes(name)) return alert('Pool already exists');
+    comps.push(name);
+    this.saveCompetitions(comps);
+    this._refreshHeaderPoolSelector(comps);
+    this.populateCompetitionDropdown();
+    this.renderAdmin();
+  },
+
+  removePool(poolName) {
+    const comps = this.getCompetitions();
+    if (comps.length <= 1) return alert('Cannot remove the last pool');
+    if (!confirm(`Remove pool "${poolName}"? This only removes it from your local list — data files in GitHub remain intact.`)) return;
+    const idx = comps.indexOf(poolName);
+    if (idx === -1) return;
+    comps.splice(idx, 1);
+    this.saveCompetitions(comps);
+    if (this.currentCompetition === poolName) {
+      this.currentCompetition = comps[0];
+      LocalStorage.setCompetition(comps[0]);
+    }
+    this._refreshHeaderPoolSelector(comps);
+    this.populateCompetitionDropdown();
+    this.renderAdmin();
+  },
+
+  getPoolMembers(pool) {
+    try {
+      return JSON.parse(localStorage.getItem(`wc2026_${pool}_registered`) || '[]');
+    } catch { return []; }
+  },
+
+  addMember(pool) {
+    const input = document.getElementById(`member-add-${pool}`);
+    const name = input.value.trim().toLowerCase();
+    if (!name) return;
+    const members = this.getPoolMembers(pool);
+    if (members.includes(name)) return alert('Member already in pool');
+    members.push(name);
+    localStorage.setItem(`wc2026_${pool}_registered`, JSON.stringify(members));
+    input.value = '';
+    this.renderAdmin();
+  },
+
+  removeMember(pool, name) {
+    const members = this.getPoolMembers(pool).filter(m => m !== name);
+    localStorage.setItem(`wc2026_${pool}_registered`, JSON.stringify(members));
+    this.renderAdmin();
+  },
+
+  _refreshHeaderPoolSelector(comps) {
     const select = document.getElementById('admin-pool-select');
     if (select) {
       select.innerHTML = comps.map(c => `<option value="${c}" ${c === this.currentCompetition ? 'selected' : ''}>${c.charAt(0).toUpperCase() + c.slice(1)}</option>`).join('');
     }
-    this.renderAdmin();
   },
 
   saveGitHubConfig() {
