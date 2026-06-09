@@ -118,6 +118,25 @@ body {
 }
 .logout-btn:hover { background: rgba(255,255,255,0.25); }
 
+.admin-pool-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255,255,255,0.15);
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+}
+.admin-pool-selector label { font-size: 0.75rem; color: white; font-weight: 600; }
+.admin-pool-selector select {
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+.admin-pool-selector select option { color: var(--text); background: white; }
+
 /* Navigation */
 .nav {
   background: white;

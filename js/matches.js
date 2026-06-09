@@ -261,6 +261,9 @@ const SCORING = {
   generalFastestGoalTeam: 10,
   generalBestPlayer: 15,
   generalTotalGoals: 8,
+  generalTotalCorners: 8,
+  generalTotalPenalties: 8,
+  generalTotalPitchInvaders: 5,
 };
 
 // Timezone offsets from ET (hours)

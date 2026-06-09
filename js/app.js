@@ -101,7 +101,6 @@ const App = {
     const comp = document.getElementById('login-competition').value;
     const name = document.getElementById('login-name').value.trim();
     const pass = document.getElementById('login-password')?.value || '';
-    if (!comp) return alert('Please select a competition pool');
     if (!name) return alert('Please enter your name');
 
     // Admin check
@@ -110,12 +109,16 @@ const App = {
         return alert('Invalid admin password');
       }
       this.isAdmin = true;
+      // Admin doesn't need a pool — default to first available
+      const comps = this.getCompetitions();
+      this.currentCompetition = comp || comps[0] || 'work';
+      LocalStorage.setCompetition(this.currentCompetition);
     } else {
+      if (!comp) return alert('Please select a competition pool');
       this.isAdmin = false;
       // Check username uniqueness — a name belongs to whoever used it first
       const existingPlayer = localStorage.getItem(`wc2026_${comp}_player`);
       if (existingPlayer && existingPlayer.toLowerCase() !== name.toLowerCase()) {
-        // Check if this name is taken by someone else on GitHub
         if (GitHubAPI.isConfigured()) {
           const predData = await GitHubAPI.readFile(`data/${comp}/predictions.json`);
           if (predData.data && predData.data[name] !== undefined) {
@@ -127,17 +130,16 @@ const App = {
       const registeredNames = JSON.parse(localStorage.getItem(`wc2026_${comp}_registered`) || '[]');
       const nameLower = name.toLowerCase();
       if (registeredNames.length > 0 && !registeredNames.includes(nameLower)) {
-        // New name on this browser — register it
         registeredNames.push(nameLower);
         localStorage.setItem(`wc2026_${comp}_registered`, JSON.stringify(registeredNames));
       } else if (registeredNames.length === 0) {
         localStorage.setItem(`wc2026_${comp}_registered`, JSON.stringify([nameLower]));
       }
+      this.currentCompetition = comp;
+      LocalStorage.setCompetition(comp);
     }
 
-    this.currentCompetition = comp;
     this.playerName = name;
-    LocalStorage.setCompetition(comp);
     LocalStorage.setPlayerName(name);
     this.showApp();
   },
@@ -155,9 +157,26 @@ const App = {
     document.querySelector('.nav').style.display = 'block';
     document.getElementById('user-info').style.display = 'flex';
     document.getElementById('player-name-display').textContent = this.playerName;
-    // Show/hide admin tab
+    // Show/hide admin tab and pool selector
     const adminTab = document.querySelector('.nav-tab[data-tab="admin"]');
     if (adminTab) adminTab.style.display = this.isAdmin ? '' : 'none';
+    const poolSelector = document.getElementById('admin-pool-selector');
+    if (poolSelector) {
+      if (this.isAdmin) {
+        poolSelector.style.display = 'flex';
+        const select = document.getElementById('admin-pool-select');
+        const comps = this.getCompetitions();
+        select.innerHTML = comps.map(c => `<option value="${c}" ${c === this.currentCompetition ? 'selected' : ''}>${c.charAt(0).toUpperCase() + c.slice(1)}</option>`).join('');
+      } else {
+        poolSelector.style.display = 'none';
+      }
+    }
+    this.renderCurrentTab();
+  },
+
+  setAdminPool(pool) {
+    this.currentCompetition = pool;
+    LocalStorage.setCompetition(pool);
     this.renderCurrentTab();
   },
 
@@ -311,6 +330,21 @@ const App = {
           <input type="number" id="gen-totalgoals" placeholder="e.g. 172" value="${saved.totalGoals || ''}" ${disabledAttr}>
           <span class="points-hint">${SCORING.generalTotalGoals} pts (within 10)</span>
         </div>
+        <div class="pred-field">
+          <label>Total Corners (tournament)</label>
+          <input type="number" id="gen-corners" placeholder="e.g. 1000" value="${saved.totalCorners || ''}" ${disabledAttr}>
+          <span class="points-hint">${SCORING.generalTotalCorners} pts (within 50)</span>
+        </div>
+        <div class="pred-field">
+          <label>Total Penalties (tournament)</label>
+          <input type="number" id="gen-penalties" placeholder="e.g. 25" value="${saved.totalPenalties || ''}" ${disabledAttr}>
+          <span class="points-hint">${SCORING.generalTotalPenalties} pts (within 5)</span>
+        </div>
+        <div class="pred-field">
+          <label>Total Pitch Invaders (tournament)</label>
+          <input type="number" id="gen-invaders" placeholder="e.g. 3" value="${saved.totalPitchInvaders || ''}" ${disabledAttr}>
+          <span class="points-hint">${SCORING.generalTotalPitchInvaders} pts (exact)</span>
+        </div>
       </div>
       ${locked ? '' : `<button class="btn btn-primary" onclick="App.${saveFunc}()">${btnLabel}</button>`}
       <div id="general-sync-status"></div>
@@ -328,6 +362,9 @@ const App = {
       <div class="saved-item"><strong>Yellow Cards:</strong> ${saved.totalYellowCards || '-'}</div>
       <div class="saved-item"><strong>Red Cards:</strong> ${saved.totalRedCards || '-'}</div>
       <div class="saved-item"><strong>Total Goals:</strong> ${saved.totalGoals || '-'}</div>
+      <div class="saved-item"><strong>Total Corners:</strong> ${saved.totalCorners || '-'}</div>
+      <div class="saved-item"><strong>Total Penalties:</strong> ${saved.totalPenalties || '-'}</div>
+      <div class="saved-item"><strong>Pitch Invaders:</strong> ${saved.totalPitchInvaders || '-'}</div>
     </div>`;
   },
 
@@ -342,6 +379,9 @@ const App = {
       totalYellowCards: document.getElementById('gen-yellows').value,
       totalRedCards: document.getElementById('gen-reds').value,
       totalGoals: document.getElementById('gen-totalgoals').value,
+      totalCorners: document.getElementById('gen-corners').value,
+      totalPenalties: document.getElementById('gen-penalties').value,
+      totalPitchInvaders: document.getElementById('gen-invaders').value,
     };
     LocalStorage.saveGeneralPredictions(predictions);
     // Sync to GitHub if configured
@@ -366,6 +406,9 @@ const App = {
       totalYellowCards: document.getElementById('gen-yellows').value,
       totalRedCards: document.getElementById('gen-reds').value,
       totalGoals: document.getElementById('gen-totalgoals').value,
+      totalCorners: document.getElementById('gen-corners').value,
+      totalPenalties: document.getElementById('gen-penalties').value,
+      totalPitchInvaders: document.getElementById('gen-invaders').value,
     };
     const status = document.getElementById('general-sync-status');
     if (GitHubAPI.isConfigured()) {
@@ -795,6 +838,9 @@ const App = {
             <tr><td>Total Yellow Cards (within 10)</td><td><strong>${SCORING.generalTotalYellowCards} pts</strong></td></tr>
             <tr><td>Total Red Cards (within 3)</td><td><strong>${SCORING.generalTotalRedCards} pts</strong></td></tr>
             <tr><td>Total Goals (within 10)</td><td><strong>${SCORING.generalTotalGoals} pts</strong></td></tr>
+            <tr><td>Total Corners (within 50)</td><td><strong>${SCORING.generalTotalCorners} pts</strong></td></tr>
+            <tr><td>Total Penalties (within 5)</td><td><strong>${SCORING.generalTotalPenalties} pts</strong></td></tr>
+            <tr><td>Total Pitch Invaders (exact)</td><td><strong>${SCORING.generalTotalPitchInvaders} pts</strong></td></tr>
           </table>
         </div>
       </div>`;
