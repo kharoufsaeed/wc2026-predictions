@@ -5,6 +5,34 @@ function flagIcon(isoCode) {
   return `<span class="fi fi-${isoCode}"></span>`;
 }
 
+// Helper: generate player options for dropdowns
+function playerOptions(positions, selectedValue) {
+  let players = [];
+  if (Array.isArray(positions)) {
+    positions.forEach(pos => { players = players.concat(PLAYERS[pos] || []); });
+  } else {
+    players = PLAYERS[positions] || [];
+  }
+  players.sort((a, b) => a.name.localeCompare(b.name));
+  return players.map(p => {
+    const team = TEAMS[p.country];
+    const flag = team ? team.flag : '';
+    const label = `${p.name} (${p.country})`;
+    const selected = selectedValue === p.name ? 'selected' : '';
+    return `<option value="${p.name}" ${selected} data-flag="${flag}">${label}</option>`;
+  }).join('');
+}
+
+// Helper: generate goalkeeper options
+function goalkeeperOptions(selectedValue) {
+  return playerOptions('goalkeepers', selectedValue);
+}
+
+// Helper: generate all players options (for top scorer, best player, MOTM, FGS)
+function allPlayerOptions(selectedValue) {
+  return playerOptions(['goalkeepers', 'defenders', 'midfielders', 'forwards'], selectedValue);
+}
+
 const App = {
   currentTab: 'general',
   currentCompetition: null,
@@ -195,17 +223,26 @@ const App = {
       <div class="general-pred-grid">
         <div class="pred-field">
           <label>Top Scorer (Golden Boot)</label>
-          <input type="text" id="gen-topscorer" placeholder="e.g. Mbappe" value="${saved.topScorer || ''}" ${disabledAttr}>
+          <select id="gen-topscorer" ${disabledAttr}>
+            <option value="">Select player...</option>
+            ${allPlayerOptions(saved.topScorer)}
+          </select>
           <span class="points-hint">${SCORING.generalTopScorer} pts</span>
         </div>
         <div class="pred-field">
           <label>Best Player (Golden Ball)</label>
-          <input type="text" id="gen-bestplayer" placeholder="e.g. Messi" value="${saved.bestPlayer || ''}" ${disabledAttr}>
+          <select id="gen-bestplayer" ${disabledAttr}>
+            <option value="">Select player...</option>
+            ${allPlayerOptions(saved.bestPlayer)}
+          </select>
           <span class="points-hint">${SCORING.generalBestPlayer} pts</span>
         </div>
         <div class="pred-field">
           <label>Best Goalkeeper (Golden Glove)</label>
-          <input type="text" id="gen-goalkeeper" placeholder="e.g. Courtois" value="${saved.bestGoalkeeper || ''}" ${disabledAttr}>
+          <select id="gen-goalkeeper" ${disabledAttr}>
+            <option value="">Select goalkeeper...</option>
+            ${goalkeeperOptions(saved.bestGoalkeeper)}
+          </select>
           <span class="points-hint">${SCORING.generalBestGoalkeeper} pts</span>
         </div>
         <div class="pred-field">
@@ -269,9 +306,9 @@ const App = {
 
   async saveGeneralPredictions() {
     const predictions = {
-      topScorer: document.getElementById('gen-topscorer').value.trim(),
-      bestPlayer: document.getElementById('gen-bestplayer').value.trim(),
-      bestGoalkeeper: document.getElementById('gen-goalkeeper').value.trim(),
+      topScorer: document.getElementById('gen-topscorer').value,
+      bestPlayer: document.getElementById('gen-bestplayer').value,
+      bestGoalkeeper: document.getElementById('gen-goalkeeper').value,
       fairPlayTeam: document.getElementById('gen-fairplay').value,
       mostCleanSheets: document.getElementById('gen-cleansheets').value,
       fastestGoalTeam: document.getElementById('gen-fastestgoal').value,
@@ -395,11 +432,17 @@ const App = {
           <div class="pred-extras">
             <div class="pred-field">
               <label>Man of the Match</label>
-              <input type="text" id="pred-motm" placeholder="Player name" value="${pred.manOfMatch || ''}">
+              <select id="pred-motm">
+                <option value="">Select player...</option>
+                ${playerOptions(['goalkeepers','defenders','midfielders','forwards'], pred.manOfMatch)}
+              </select>
             </div>
             <div class="pred-field">
               <label>First Goal Scorer</label>
-              <input type="text" id="pred-fgs" placeholder="Player name" value="${pred.firstGoalScorer || ''}">
+              <select id="pred-fgs">
+                <option value="">Select player...</option>
+                ${playerOptions(['goalkeepers','defenders','midfielders','forwards'], pred.firstGoalScorer)}
+              </select>
             </div>
             <div class="pred-field">
               <label>Total Cards (yellow+red)</label>
@@ -425,8 +468,8 @@ const App = {
     const prediction = {
       homeScore: document.getElementById('pred-home').value,
       awayScore: document.getElementById('pred-away').value,
-      manOfMatch: document.getElementById('pred-motm').value.trim(),
-      firstGoalScorer: document.getElementById('pred-fgs').value.trim(),
+      manOfMatch: document.getElementById('pred-motm').value,
+      firstGoalScorer: document.getElementById('pred-fgs').value,
       totalCards: document.getElementById('pred-cards').value,
       bothTeamsScore: document.getElementById('pred-bts').value,
     };
@@ -739,8 +782,12 @@ const App = {
             <div class="score-input"><label>Away</label><input type="number" id="res-away" min="0"></div>
           </div>
           <div class="pred-extras">
-            <div class="pred-field"><label>Man of the Match</label><input type="text" id="res-motm"></div>
-            <div class="pred-field"><label>First Goal Scorer</label><input type="text" id="res-fgs"></div>
+            <div class="pred-field"><label>Man of the Match</label>
+              <select id="res-motm"><option value="">Select player...</option>${allPlayerOptions('')}</select>
+            </div>
+            <div class="pred-field"><label>First Goal Scorer</label>
+              <select id="res-fgs"><option value="">Select player...</option>${allPlayerOptions('')}</select>
+            </div>
             <div class="pred-field"><label>Total Cards</label><input type="number" id="res-cards" min="0"></div>
             <div class="pred-field"><label>Both Teams Scored?</label>
               <select id="res-bts"><option value="yes">Yes</option><option value="no">No</option></select>
@@ -757,15 +804,24 @@ const App = {
           <div class="general-pred-grid">
             <div class="pred-field">
               <label>Top Scorer (Golden Boot)</label>
-              <input type="text" id="gen-res-topscorer" placeholder="Player name">
+              <select id="gen-res-topscorer">
+                <option value="">Select player...</option>
+                ${allPlayerOptions('')}
+              </select>
             </div>
             <div class="pred-field">
               <label>Best Player (Golden Ball)</label>
-              <input type="text" id="gen-res-bestplayer" placeholder="Player name">
+              <select id="gen-res-bestplayer">
+                <option value="">Select player...</option>
+                ${allPlayerOptions('')}
+              </select>
             </div>
             <div class="pred-field">
               <label>Best Goalkeeper (Golden Glove)</label>
-              <input type="text" id="gen-res-goalkeeper" placeholder="Player name">
+              <select id="gen-res-goalkeeper">
+                <option value="">Select goalkeeper...</option>
+                ${goalkeeperOptions('')}
+              </select>
             </div>
             <div class="pred-field">
               <label>Fair Play Team</label>
@@ -809,9 +865,9 @@ const App = {
 
   async submitGeneralResults() {
     const results = {
-      topScorer: document.getElementById('gen-res-topscorer').value.trim(),
-      bestPlayer: document.getElementById('gen-res-bestplayer').value.trim(),
-      bestGoalkeeper: document.getElementById('gen-res-goalkeeper').value.trim(),
+      topScorer: document.getElementById('gen-res-topscorer').value,
+      bestPlayer: document.getElementById('gen-res-bestplayer').value,
+      bestGoalkeeper: document.getElementById('gen-res-goalkeeper').value,
       fairPlayTeam: document.getElementById('gen-res-fairplay').value,
       mostCleanSheets: document.getElementById('gen-res-cleansheets').value,
       fastestGoalTeam: document.getElementById('gen-res-fastestgoal').value,
@@ -866,8 +922,8 @@ const App = {
     const result = {
       homeScore: document.getElementById('res-home').value,
       awayScore: document.getElementById('res-away').value,
-      manOfMatch: document.getElementById('res-motm').value.trim(),
-      firstGoalScorer: document.getElementById('res-fgs').value.trim(),
+      manOfMatch: document.getElementById('res-motm').value,
+      firstGoalScorer: document.getElementById('res-fgs').value,
       totalCards: document.getElementById('res-cards').value,
       bothTeamsScore: document.getElementById('res-bts').value,
     };
