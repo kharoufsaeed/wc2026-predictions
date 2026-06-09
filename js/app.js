@@ -157,26 +157,9 @@ const App = {
     document.querySelector('.nav').style.display = 'block';
     document.getElementById('user-info').style.display = 'flex';
     document.getElementById('player-name-display').textContent = this.playerName;
-    // Show/hide admin tab and pool selector
+    // Show/hide admin tab
     const adminTab = document.querySelector('.nav-tab[data-tab="admin"]');
     if (adminTab) adminTab.style.display = this.isAdmin ? '' : 'none';
-    const poolSelector = document.getElementById('admin-pool-selector');
-    if (poolSelector) {
-      if (this.isAdmin) {
-        poolSelector.style.display = 'flex';
-        const select = document.getElementById('admin-pool-select');
-        const comps = this.getCompetitions();
-        select.innerHTML = comps.map(c => `<option value="${c}" ${c === this.currentCompetition ? 'selected' : ''}>${c.charAt(0).toUpperCase() + c.slice(1)}</option>`).join('');
-      } else {
-        poolSelector.style.display = 'none';
-      }
-    }
-    this.renderCurrentTab();
-  },
-
-  setAdminPool(pool) {
-    this.currentCompetition = pool;
-    LocalStorage.setCompetition(pool);
     this.renderCurrentTab();
   },
 
@@ -926,8 +909,8 @@ const App = {
       this.currentCompetition = newName;
       LocalStorage.setCompetition(newName);
     }
-    // Update pool selector in header
-    this._refreshHeaderPoolSelector(comps);
+    // Update login dropdown
+    this.populateCompetitionDropdown();
     this.renderAdmin();
   },
 
@@ -939,7 +922,6 @@ const App = {
     if (comps.includes(name)) return alert('Pool already exists');
     comps.push(name);
     this.saveCompetitions(comps);
-    this._refreshHeaderPoolSelector(comps);
     this.populateCompetitionDropdown();
     this.renderAdmin();
   },
@@ -956,7 +938,6 @@ const App = {
       this.currentCompetition = comps[0];
       LocalStorage.setCompetition(comps[0]);
     }
-    this._refreshHeaderPoolSelector(comps);
     this.populateCompetitionDropdown();
     this.renderAdmin();
   },
@@ -983,13 +964,6 @@ const App = {
     const members = this.getPoolMembers(pool).filter(m => m !== name);
     localStorage.setItem(`wc2026_${pool}_registered`, JSON.stringify(members));
     this.renderAdmin();
-  },
-
-  _refreshHeaderPoolSelector(comps) {
-    const select = document.getElementById('admin-pool-select');
-    if (select) {
-      select.innerHTML = comps.map(c => `<option value="${c}" ${c === this.currentCompetition ? 'selected' : ''}>${c.charAt(0).toUpperCase() + c.slice(1)}</option>`).join('');
-    }
   },
 
   saveGitHubConfig() {
