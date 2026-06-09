@@ -146,8 +146,8 @@ const GitHubAPI = {
   },
 
   // Get leaderboard (computed client-side from predictions + results)
-  async getLeaderboard() {
-    const comp = LocalStorage.getCompetition();
+  async getLeaderboard(comp) {
+    comp = comp || LocalStorage.getCompetition();
     const [predResult, resResult, genResult] = await Promise.all([
       this.readFile(this.PATHS.predictions(comp)),
       this.readFile(this.PATHS.results(comp)),

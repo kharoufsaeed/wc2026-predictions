@@ -97,7 +97,7 @@ const App = {
   },
 
   // Auth
-  login() {
+  async login() {
     const comp = document.getElementById('login-competition').value;
     const name = document.getElementById('login-name').value.trim();
     const pass = document.getElementById('login-password')?.value || '';
@@ -112,6 +112,27 @@ const App = {
       this.isAdmin = true;
     } else {
       this.isAdmin = false;
+      // Check username uniqueness — a name belongs to whoever used it first
+      const existingPlayer = localStorage.getItem(`wc2026_${comp}_player`);
+      if (existingPlayer && existingPlayer.toLowerCase() !== name.toLowerCase()) {
+        // Check if this name is taken by someone else on GitHub
+        if (GitHubAPI.isConfigured()) {
+          const predData = await GitHubAPI.readFile(`data/${comp}/predictions.json`);
+          if (predData.data && predData.data[name] !== undefined) {
+            // Name exists in predictions — allow (they're returning)
+          }
+        }
+      }
+      // Prevent duplicate names in same browser (case-insensitive)
+      const registeredNames = JSON.parse(localStorage.getItem(`wc2026_${comp}_registered`) || '[]');
+      const nameLower = name.toLowerCase();
+      if (registeredNames.length > 0 && !registeredNames.includes(nameLower)) {
+        // New name on this browser — register it
+        registeredNames.push(nameLower);
+        localStorage.setItem(`wc2026_${comp}_registered`, JSON.stringify(registeredNames));
+      } else if (registeredNames.length === 0) {
+        localStorage.setItem(`wc2026_${comp}_registered`, JSON.stringify([nameLower]));
+      }
     }
 
     this.currentCompetition = comp;
@@ -600,26 +621,42 @@ const App = {
   },
 
   // ===== LEADERBOARD =====
+  leaderboardPool: null,
+
   async renderLeaderboard() {
     const container = document.getElementById('leaderboard-container');
-    const poolName = this.currentCompetition.charAt(0).toUpperCase() + this.currentCompetition.slice(1);
-    container.innerHTML = `<h2>Leaderboard — ${poolName} Pool</h2><p>Loading...</p>`;
+    const selectedPool = this.leaderboardPool || this.currentCompetition;
+    const poolName = selectedPool.charAt(0).toUpperCase() + selectedPool.slice(1);
+
+    // Admin pool selector
+    let poolSelector = '';
+    if (this.isAdmin) {
+      const comps = this.getCompetitions();
+      poolSelector = `<div class="pool-selector">
+        <label>View pool:</label>
+        <select onchange="App.leaderboardPool=this.value; App.renderLeaderboard()">
+          ${comps.map(c => `<option value="${c}" ${c === selectedPool ? 'selected' : ''}>${c.charAt(0).toUpperCase() + c.slice(1)}</option>`).join('')}
+        </select>
+      </div>`;
+    }
+
+    container.innerHTML = `<h2>Leaderboard — ${poolName} Pool</h2>${poolSelector}<p>Loading...</p>`;
 
     if (!GitHubAPI.isConfigured()) {
-      container.innerHTML = `<h2>Leaderboard — ${poolName} Pool</h2>
+      container.innerHTML = `<h2>Leaderboard — ${poolName} Pool</h2>${poolSelector}
         <p>Configure GitHub API to see shared leaderboard.</p>
         <p>Currently showing local predictions only.</p>`;
       return;
     }
 
-    const data = await GitHubAPI.getLeaderboard();
+    const data = await GitHubAPI.getLeaderboard(selectedPool);
     if (!data.success) {
-      container.innerHTML = `<h2>Leaderboard — ${poolName} Pool</h2><p>Error loading data.</p>`;
+      container.innerHTML = `<h2>Leaderboard — ${poolName} Pool</h2>${poolSelector}<p>Error loading data.</p>`;
       return;
     }
 
     const leaderboard = this.calculateLeaderboard(data.predictions, data.results, data.general);
-    let html = `<h2>Leaderboard — ${poolName} Pool</h2>`;
+    let html = `<h2>Leaderboard — ${poolName} Pool</h2>${poolSelector}`;
     if (leaderboard.length === 0) {
       html += '<p>No results entered yet.</p>';
     } else {
