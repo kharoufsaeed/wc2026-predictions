@@ -212,7 +212,6 @@ const App = {
       case 'general': this.renderGeneralPredictions(); break;
       case 'matches': this.renderMatches(); break;
       case 'standings': this.renderStandings(); break;
-      case 'predictions': this.renderMyPredictions(); break;
       case 'leaderboard': this.renderLeaderboard(); break;
       case 'bracket': this.renderBracket(); break;
       case 'rules': this.renderRules(); break;
@@ -385,24 +384,7 @@ const App = {
         if (!groups[g]) return;
         html += `<h3>Group ${g}</h3><div class="matches-list">`;
         groups[g].forEach(match => {
-          const home = TEAMS[match.home];
-          const away = TEAMS[match.away];
-          const pred = LocalStorage.getPrediction(match.id);
-          const predClass = pred ? 'has-prediction' : '';
-          html += `
-            <div class="match-card ${predClass}" onclick="App.openPredictionModal('${match.id}')">
-              <div class="match-header">
-                <span class="match-id">${match.id}</span>
-                <span class="match-datetime">${this.formatDateTime(match.date, match.time)}</span>
-              </div>
-              <div class="match-teams">
-                <span class="team">${flagIcon(home.flag)} ${home.code}</span>
-                <span class="vs">vs</span>
-                <span class="team">${flagIcon(away.flag)} ${away.code}</span>
-              </div>
-              <div class="match-venue">${VENUES[match.venue] || match.venue}</div>
-              ${pred ? `<div class="prediction-badge">${pred.homeScore}-${pred.awayScore}</div>` : '<div class="prediction-badge empty">No prediction</div>'}
-            </div>`;
+          html += this.renderMatchCard(match);
         });
         html += '</div>';
       });
@@ -433,74 +415,108 @@ const App = {
     container.innerHTML = html;
   },
 
-  // ===== PREDICTION MODAL =====
-  openPredictionModal(matchId) {
-    const match = ALL_MATCHES.find(m => m.id === matchId);
-    if (!match) return;
+  renderMatchCard(match) {
     const home = TEAMS[match.home];
     const away = TEAMS[match.away];
-    const pred = LocalStorage.getPrediction(matchId) || {};
+    const pred = LocalStorage.getPrediction(match.id);
+    const predClass = pred ? 'has-prediction' : '';
+    const expanded = this._expandedMatch === match.id;
 
-    const modal = document.getElementById('prediction-modal');
-    modal.innerHTML = `
-      <div class="modal-content">
-        <h3>${flagIcon(home.flag)} ${home.code} vs ${flagIcon(away.flag)} ${away.code}</h3>
-        <p>${this.formatDateTime(match.date, match.time)} | ${match.venue}</p>
-        <div class="pred-form">
-          <div class="score-row">
-            <div class="score-input">
-              <label>${home.code}</label>
-              <input type="number" id="pred-home" min="0" max="20" value="${pred.homeScore ?? ''}">
-            </div>
-            <span class="score-dash">-</span>
-            <div class="score-input">
-              <label>${away.code}</label>
-              <input type="number" id="pred-away" min="0" max="20" value="${pred.awayScore ?? ''}">
-            </div>
-          </div>
-          <div class="pred-extras">
-            <div class="pred-field">
-              <label>Man of the Match</label>
-              <select id="pred-motm">
-                <option value="">Select player...</option>
-                ${playerOptions(['goalkeepers','defenders','midfielders','forwards'], pred.manOfMatch)}
-              </select>
-            </div>
-            <div class="pred-field">
-              <label>First Goal Scorer</label>
-              <select id="pred-fgs">
-                <option value="">Select player...</option>
-                ${playerOptions(['goalkeepers','defenders','midfielders','forwards'], pred.firstGoalScorer)}
-              </select>
-            </div>
-            <div class="pred-field">
-              <label>Total Cards (yellow+red)</label>
-              <input type="number" id="pred-cards" min="0" max="30" value="${pred.totalCards ?? ''}">
-            </div>
-            <div class="pred-field">
-              <label>Both Teams Score?</label>
-              <select id="pred-bts">
-                <option value="">Select...</option>
-                <option value="yes" ${pred.bothTeamsScore === 'yes' ? 'selected' : ''}>Yes</option>
-                <option value="no" ${pred.bothTeamsScore === 'no' ? 'selected' : ''}>No</option>
-              </select>
-            </div>
-          </div>
-          <button class="btn btn-primary" onclick="App.savePrediction('${matchId}')">Save Prediction</button>
-          <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+    let cardHtml = `<div class="match-card ${predClass}" id="match-card-${match.id}">`;
+    cardHtml += `<div class="match-card-header" onclick="App.toggleMatchPrediction('${match.id}')">`;
+    cardHtml += `<div class="match-header">
+        <span class="match-id">${match.id}</span>
+        <span class="match-datetime">${this.formatDateTime(match.date, match.time)}</span>
+      </div>
+      <div class="match-teams">
+        <span class="team">${flagIcon(home.flag)} ${home.code}</span>
+        <span class="vs">vs</span>
+        <span class="team">${flagIcon(away.flag)} ${away.code}</span>
+      </div>
+      <div class="match-venue">${VENUES[match.venue] || match.venue}</div>`;
+
+    // Show saved prediction summary
+    if (pred) {
+      cardHtml += `<div class="match-pred-saved">
+        <span class="pred-score">${pred.homeScore} - ${pred.awayScore}</span>
+        <div class="pred-details">
+          ${pred.manOfMatch ? 'MOTM: ' + pred.manOfMatch : ''}
+          ${pred.firstGoalScorer ? ' | FGS: ' + pred.firstGoalScorer : ''}
+          ${pred.totalCards ? ' | Cards: ' + pred.totalCards : ''}
+          ${pred.bothTeamsScore ? ' | BTS: ' + pred.bothTeamsScore : ''}
         </div>
       </div>`;
-    modal.classList.add('active');
+    } else {
+      cardHtml += `<div class="prediction-badge empty">Click to predict</div>`;
+    }
+    cardHtml += '</div>'; // close match-card-header
+
+    // Inline prediction form (shown when expanded)
+    if (expanded) {
+      cardHtml += `<div class="match-pred-inline">
+        <div class="score-row">
+          <div class="score-input">
+            <label>${home.code}</label>
+            <input type="number" id="pred-home-${match.id}" min="0" max="20" value="${pred?.homeScore ?? ''}">
+          </div>
+          <span class="score-dash">-</span>
+          <div class="score-input">
+            <label>${away.code}</label>
+            <input type="number" id="pred-away-${match.id}" min="0" max="20" value="${pred?.awayScore ?? ''}">
+          </div>
+        </div>
+        <div class="pred-extras">
+          <div class="pred-field">
+            <label>Man of the Match</label>
+            <select id="pred-motm-${match.id}">
+              <option value="">Select player...</option>
+              ${playerOptions(['goalkeepers','defenders','midfielders','forwards'], pred?.manOfMatch)}
+            </select>
+          </div>
+          <div class="pred-field">
+            <label>First Goal Scorer</label>
+            <select id="pred-fgs-${match.id}">
+              <option value="">Select player...</option>
+              ${playerOptions(['goalkeepers','defenders','midfielders','forwards'], pred?.firstGoalScorer)}
+            </select>
+          </div>
+          <div class="pred-field">
+            <label>Total Cards</label>
+            <input type="number" id="pred-cards-${match.id}" min="0" max="30" value="${pred?.totalCards ?? ''}">
+          </div>
+          <div class="pred-field">
+            <label>Both Teams Score?</label>
+            <select id="pred-bts-${match.id}">
+              <option value="">Select...</option>
+              <option value="yes" ${pred?.bothTeamsScore === 'yes' ? 'selected' : ''}>Yes</option>
+              <option value="no" ${pred?.bothTeamsScore === 'no' ? 'selected' : ''}>No</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="App.saveInlinePrediction('${match.id}')">Save</button>
+        <button class="btn btn-secondary" onclick="App.toggleMatchPrediction(null)">Cancel</button>
+      </div>`;
+    }
+
+    cardHtml += '</div>';
+    return cardHtml;
   },
 
-  async savePrediction(matchId) {
+  _expandedMatch: null,
+
+  toggleMatchPrediction(matchId) {
+    this._expandedMatch = (this._expandedMatch === matchId) ? null : matchId;
+    this.renderMatches();
+  },
+
+  async saveInlinePrediction(matchId) {
     const prediction = {
-      homeScore: document.getElementById('pred-home').value,
-      awayScore: document.getElementById('pred-away').value,
-      manOfMatch: document.getElementById('pred-motm').value,
-      firstGoalScorer: document.getElementById('pred-fgs').value,
-      totalCards: document.getElementById('pred-cards').value,
-      bothTeamsScore: document.getElementById('pred-bts').value,
+      homeScore: document.getElementById(`pred-home-${matchId}`).value,
+      awayScore: document.getElementById(`pred-away-${matchId}`).value,
+      manOfMatch: document.getElementById(`pred-motm-${matchId}`).value,
+      firstGoalScorer: document.getElementById(`pred-fgs-${matchId}`).value,
+      totalCards: document.getElementById(`pred-cards-${matchId}`).value,
+      bothTeamsScore: document.getElementById(`pred-bts-${matchId}`).value,
     };
     if (prediction.homeScore === '' || prediction.awayScore === '') {
       return alert('Please enter a score prediction');
@@ -509,12 +525,8 @@ const App = {
     if (GitHubAPI.isConfigured()) {
       await GitHubAPI.submitPrediction(this.playerName, matchId, prediction);
     }
-    this.closeModal();
+    this._expandedMatch = null;
     this.renderMatches();
-  },
-
-  closeModal() {
-    document.getElementById('prediction-modal').classList.remove('active');
   },
 
   // ===== STANDINGS =====
@@ -565,59 +577,6 @@ const App = {
           <tr><td colspan="7" style="text-align:center; color: var(--text-light);">Results pending...</td></tr>
         </tbody>
       </table>`;
-  },
-
-  // ===== MY PREDICTIONS =====
-  renderMyPredictions() {
-    const container = document.getElementById('predictions-container');
-    const predictions = LocalStorage.getAllPredictions();
-    const general = LocalStorage.getGeneralPredictions();
-    const count = Object.keys(predictions).length;
-    const hasGeneral = Object.keys(general).length > 0;
-
-    let html = `<h2>My Predictions</h2>`;
-
-    // General predictions summary
-    html += '<h3>General Tournament Predictions</h3>';
-    if (hasGeneral) {
-      html += `<div class="my-general-summary">
-        <div class="saved-general-grid">
-          <div class="saved-item"><strong>Top Scorer:</strong> ${general.topScorer || '-'}</div>
-          <div class="saved-item"><strong>Best Player:</strong> ${general.bestPlayer || '-'}</div>
-          <div class="saved-item"><strong>Best GK:</strong> ${general.bestGoalkeeper || '-'}</div>
-          <div class="saved-item"><strong>Fair Play:</strong> ${general.fairPlayTeam ? flagIcon(TEAMS[general.fairPlayTeam]?.flag) + ' ' + general.fairPlayTeam : '-'}</div>
-          <div class="saved-item"><strong>Clean Sheets:</strong> ${general.mostCleanSheets ? flagIcon(TEAMS[general.mostCleanSheets]?.flag) + ' ' + general.mostCleanSheets : '-'}</div>
-          <div class="saved-item"><strong>Fastest Goal:</strong> ${general.fastestGoalTeam ? flagIcon(TEAMS[general.fastestGoalTeam]?.flag) + ' ' + general.fastestGoalTeam : '-'}</div>
-          <div class="saved-item"><strong>Yellow Cards:</strong> ${general.totalYellowCards || '-'}</div>
-          <div class="saved-item"><strong>Red Cards:</strong> ${general.totalRedCards || '-'}</div>
-          <div class="saved-item"><strong>Total Goals:</strong> ${general.totalGoals || '-'}</div>
-        </div>
-      </div>`;
-    } else {
-      html += '<p class="section-desc">No general predictions yet. Go to the General Predictions tab to make yours.</p>';
-    }
-
-    // Match predictions
-    html += `<h3>Match Predictions</h3><p>${count} of ${GROUP_MATCHES.length} group matches predicted</p>`;
-    if (count > 0) {
-      html += '<div class="predictions-list">';
-      Object.entries(predictions).forEach(([matchId, pred]) => {
-        const match = ALL_MATCHES.find(m => m.id === matchId);
-        if (!match) return;
-        const home = TEAMS[match.home];
-        const away = TEAMS[match.away];
-        html += `
-          <div class="prediction-item" onclick="App.openPredictionModal('${matchId}')">
-            <span class="pred-match">${flagIcon(home.flag)} ${home.code} ${pred.homeScore}-${pred.awayScore} ${away.code} ${flagIcon(away.flag)}</span>
-            <span class="pred-extras-summary">
-              ${pred.manOfMatch ? 'MOTM: ' + pred.manOfMatch : ''}
-              ${pred.firstGoalScorer ? '| FGS: ' + pred.firstGoalScorer : ''}
-            </span>
-          </div>`;
-      });
-      html += '</div>';
-    }
-    container.innerHTML = html;
   },
 
   // ===== LEADERBOARD =====

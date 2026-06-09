@@ -40,7 +40,6 @@
       <button class="nav-tab active" data-tab="general">General Predictions</button>
       <button class="nav-tab" data-tab="matches">Matches</button>
       <button class="nav-tab" data-tab="standings">Standings</button>
-      <button class="nav-tab" data-tab="predictions">My Predictions</button>
       <button class="nav-tab" data-tab="leaderboard">Leaderboard</button>
       <button class="nav-tab" data-tab="bracket">Bracket</button>
       <button class="nav-tab" data-tab="rules">Scoring Rules</button>
@@ -86,9 +85,6 @@
     <div class="tab-content" id="tab-standings">
       <div id="standings-container"></div>
     </div>
-    <div class="tab-content" id="tab-predictions">
-      <div id="predictions-container"></div>
-    </div>
     <div class="tab-content" id="tab-leaderboard">
       <div id="leaderboard-container"></div>
     </div>
@@ -102,9 +98,6 @@
       <div id="admin-container"></div>
     </div>
   </main>
-
-  <!-- Prediction Modal -->
-  <div class="modal-overlay" id="prediction-modal" onclick="if(event.target===this) App.closeModal()"></div>
 
   <!-- Scripts -->
   <script src="matches.js"></script>
