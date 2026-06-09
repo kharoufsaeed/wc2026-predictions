@@ -228,16 +228,23 @@ const App = {
 
   renderGeneralPredictions() {
     const container = document.getElementById('general-container');
-    const saved = LocalStorage.getGeneralPredictions();
+    const isAdmin = this.isAdmin;
+    const saved = isAdmin ? {} : LocalStorage.getGeneralPredictions();
     const hasSaved = Object.keys(saved).length > 0;
-    const locked = this.isGeneralLocked();
+    const locked = !isAdmin && this.isGeneralLocked();
     const disabledAttr = locked ? 'disabled' : '';
 
+    const title = isAdmin ? 'General Tournament — Actual Results' : 'General Tournament Predictions';
+    const desc = isAdmin
+      ? 'Enter the actual tournament results to score all players\' general predictions.'
+      : 'Make your tournament-wide predictions before the first match kicks off. These are worth big points!';
     const lockBanner = locked ? `<div class="lock-banner">🔒 Locked — Tournament has started. General predictions can no longer be changed.</div>` : '';
+    const saveFunc = isAdmin ? 'saveGeneralResults' : 'saveGeneralPredictions';
+    const btnLabel = isAdmin ? 'Submit Actual Results' : 'Save Predictions';
 
     container.innerHTML = `
-      <h2>General Tournament Predictions</h2>
-      <p class="section-desc">Make your tournament-wide predictions before the first match kicks off. These are worth big points!</p>
+      <h2>${title}</h2>
+      <p class="section-desc">${desc}</p>
       ${lockBanner}
       ${hasSaved ? this.renderSavedGeneral(saved) : ''}
       <div class="general-pred-grid">
@@ -305,7 +312,7 @@ const App = {
           <span class="points-hint">${SCORING.generalTotalGoals} pts (within 10)</span>
         </div>
       </div>
-      ${locked ? '' : '<button class="btn btn-primary" onclick="App.saveGeneralPredictions()">Save Predictions</button>'}
+      ${locked ? '' : `<button class="btn btn-primary" onclick="App.${saveFunc}()">${btnLabel}</button>`}
       <div id="general-sync-status"></div>
     `;
   },
@@ -346,6 +353,29 @@ const App = {
       setTimeout(() => status.textContent = '', 3000);
     }
     this.renderGeneralPredictions();
+  },
+
+  async saveGeneralResults() {
+    const results = {
+      topScorer: document.getElementById('gen-topscorer').value,
+      bestPlayer: document.getElementById('gen-bestplayer').value,
+      bestGoalkeeper: document.getElementById('gen-goalkeeper').value,
+      fairPlayTeam: document.getElementById('gen-fairplay').value,
+      mostCleanSheets: document.getElementById('gen-cleansheets').value,
+      fastestGoalTeam: document.getElementById('gen-fastestgoal').value,
+      totalYellowCards: document.getElementById('gen-yellows').value,
+      totalRedCards: document.getElementById('gen-reds').value,
+      totalGoals: document.getElementById('gen-totalgoals').value,
+    };
+    const status = document.getElementById('general-sync-status');
+    if (GitHubAPI.isConfigured()) {
+      status.textContent = 'Submitting actual results...';
+      const res = await GitHubAPI.submitGeneralResults(results);
+      status.textContent = res.success ? 'Actual results submitted!' : 'Error: ' + res.error;
+    } else {
+      status.textContent = 'Configure GitHub first to submit results.';
+    }
+    setTimeout(() => { if (status) status.textContent = ''; }, 3000);
   },
 
   // ===== MATCHES =====
@@ -418,7 +448,8 @@ const App = {
   renderMatchCard(match) {
     const home = TEAMS[match.home];
     const away = TEAMS[match.away];
-    const pred = LocalStorage.getPrediction(match.id);
+    const isAdmin = this.isAdmin;
+    const pred = isAdmin ? null : LocalStorage.getPrediction(match.id);
     const predClass = pred ? 'has-prediction' : '';
     const expanded = this._expandedMatch === match.id;
 
@@ -435,7 +466,7 @@ const App = {
       </div>
       <div class="match-venue">${VENUES[match.venue] || match.venue}</div>`;
 
-    // Show saved prediction summary
+    // Show saved prediction/result summary
     if (pred) {
       cardHtml += `<div class="match-pred-saved">
         <span class="pred-score">${pred.homeScore} - ${pred.awayScore}</span>
@@ -447,13 +478,17 @@ const App = {
         </div>
       </div>`;
     } else {
-      cardHtml += `<div class="prediction-badge empty">Click to predict</div>`;
+      const label = isAdmin ? 'Click to enter result' : 'Click to predict';
+      cardHtml += `<div class="prediction-badge empty">${label}</div>`;
     }
     cardHtml += '</div>'; // close match-card-header
 
-    // Inline prediction form (shown when expanded)
+    // Inline form (shown when expanded)
     if (expanded) {
+      const saveFunc = isAdmin ? 'saveInlineResult' : 'saveInlinePrediction';
+      const title = isAdmin ? 'Enter Actual Result' : '';
       cardHtml += `<div class="match-pred-inline">
+        ${title ? `<strong style="color:var(--accent);">${title}</strong>` : ''}
         <div class="score-row">
           <div class="score-input">
             <label>${home.code}</label>
@@ -493,8 +528,9 @@ const App = {
             </select>
           </div>
         </div>
-        <button class="btn btn-primary" onclick="App.saveInlinePrediction('${match.id}')">Save</button>
+        <button class="btn btn-primary" onclick="App.${saveFunc}('${match.id}')">${isAdmin ? 'Submit Result' : 'Save'}</button>
         <button class="btn btn-secondary" onclick="App.toggleMatchPrediction(null)">Cancel</button>
+        <span id="inline-status-${match.id}"></span>
       </div>`;
     }
 
@@ -527,6 +563,29 @@ const App = {
     }
     this._expandedMatch = null;
     this.renderMatches();
+  },
+
+  async saveInlineResult(matchId) {
+    const result = {
+      homeScore: document.getElementById(`pred-home-${matchId}`).value,
+      awayScore: document.getElementById(`pred-away-${matchId}`).value,
+      manOfMatch: document.getElementById(`pred-motm-${matchId}`).value,
+      firstGoalScorer: document.getElementById(`pred-fgs-${matchId}`).value,
+      totalCards: document.getElementById(`pred-cards-${matchId}`).value,
+      bothTeamsScore: document.getElementById(`pred-bts-${matchId}`).value,
+    };
+    if (result.homeScore === '' || result.awayScore === '') {
+      return alert('Please enter the match score');
+    }
+    const status = document.getElementById(`inline-status-${matchId}`);
+    if (GitHubAPI.isConfigured()) {
+      if (status) status.textContent = ' Submitting...';
+      const res = await GitHubAPI.submitResult(matchId, result);
+      if (status) status.textContent = res.success ? ' Submitted!' : ' Error: ' + res.error;
+    } else {
+      if (status) status.textContent = ' Configure GitHub first.';
+    }
+    setTimeout(() => { this._expandedMatch = null; this.renderMatches(); }, 1000);
   },
 
   // ===== STANDINGS =====
@@ -773,120 +832,9 @@ const App = {
         </div>
       </div>
       <div class="admin-section">
-        <h3>Enter Match Results</h3>
-        <p class="section-desc">Enter actual results to calculate scores and update leaderboard.</p>
-        <div class="admin-results">
-          <select id="admin-match-select">
-            <option value="">Select match...</option>
-            ${GROUP_MATCHES.map(m => `<option value="${m.id}">${m.id}: ${TEAMS[m.home].code} vs ${TEAMS[m.away].code}</option>`).join('')}
-          </select>
-          <div class="score-row" style="margin-top:1rem;">
-            <div class="score-input"><label>Home</label><input type="number" id="res-home" min="0"></div>
-            <span class="score-dash">-</span>
-            <div class="score-input"><label>Away</label><input type="number" id="res-away" min="0"></div>
-          </div>
-          <div class="pred-extras">
-            <div class="pred-field"><label>Man of the Match</label>
-              <select id="res-motm"><option value="">Select player...</option>${allPlayerOptions('')}</select>
-            </div>
-            <div class="pred-field"><label>First Goal Scorer</label>
-              <select id="res-fgs"><option value="">Select player...</option>${allPlayerOptions('')}</select>
-            </div>
-            <div class="pred-field"><label>Total Cards</label><input type="number" id="res-cards" min="0"></div>
-            <div class="pred-field"><label>Both Teams Scored?</label>
-              <select id="res-bts"><option value="yes">Yes</option><option value="no">No</option></select>
-            </div>
-          </div>
-          <button class="btn btn-primary" onclick="App.submitResult()">Submit Result</button>
-          <div id="result-status"></div>
-        </div>
-      </div>
-      <div class="admin-section">
-        <h3>General Predictions - Actual Results</h3>
-        <p class="section-desc">Enter actual tournament-wide results to score general predictions.</p>
-        <div class="admin-results">
-          <div class="general-pred-grid">
-            <div class="pred-field">
-              <label>Top Scorer (Golden Boot)</label>
-              <select id="gen-res-topscorer">
-                <option value="">Select player...</option>
-                ${allPlayerOptions('')}
-              </select>
-            </div>
-            <div class="pred-field">
-              <label>Best Player (Golden Ball)</label>
-              <select id="gen-res-bestplayer">
-                <option value="">Select player...</option>
-                ${allPlayerOptions('')}
-              </select>
-            </div>
-            <div class="pred-field">
-              <label>Best Goalkeeper (Golden Glove)</label>
-              <select id="gen-res-goalkeeper">
-                <option value="">Select goalkeeper...</option>
-                ${goalkeeperOptions('')}
-              </select>
-            </div>
-            <div class="pred-field">
-              <label>Fair Play Team</label>
-              <select id="gen-res-fairplay">
-                <option value="">Select team...</option>
-                ${Object.values(TEAMS).map(t => `<option value="${t.code}">${t.name}</option>`).join('')}
-              </select>
-            </div>
-            <div class="pred-field">
-              <label>Most Clean Sheets (Team)</label>
-              <select id="gen-res-cleansheets">
-                <option value="">Select team...</option>
-                ${Object.values(TEAMS).map(t => `<option value="${t.code}">${t.name}</option>`).join('')}
-              </select>
-            </div>
-            <div class="pred-field">
-              <label>Fastest Goal (Team)</label>
-              <select id="gen-res-fastestgoal">
-                <option value="">Select team...</option>
-                ${Object.values(TEAMS).map(t => `<option value="${t.code}">${t.name}</option>`).join('')}
-              </select>
-            </div>
-            <div class="pred-field">
-              <label>Total Yellow Cards (tournament)</label>
-              <input type="number" id="gen-res-yellows" placeholder="e.g. 220">
-            </div>
-            <div class="pred-field">
-              <label>Total Red Cards (tournament)</label>
-              <input type="number" id="gen-res-reds" placeholder="e.g. 15">
-            </div>
-            <div class="pred-field">
-              <label>Total Goals (tournament)</label>
-              <input type="number" id="gen-res-totalgoals" placeholder="e.g. 172">
-            </div>
-          </div>
-          <button class="btn btn-primary" onclick="App.submitGeneralResults()">Submit General Results</button>
-          <div id="general-result-status"></div>
-        </div>
+        <h3>How to Enter Results</h3>
+        <p class="section-desc">As admin, use the <strong>Matches</strong> tab to enter actual match results directly on each match card. Use the <strong>General Predictions</strong> tab to enter actual tournament-wide results (Golden Boot, etc.).</p>
       </div>`;
-  },
-
-  async submitGeneralResults() {
-    const results = {
-      topScorer: document.getElementById('gen-res-topscorer').value,
-      bestPlayer: document.getElementById('gen-res-bestplayer').value,
-      bestGoalkeeper: document.getElementById('gen-res-goalkeeper').value,
-      fairPlayTeam: document.getElementById('gen-res-fairplay').value,
-      mostCleanSheets: document.getElementById('gen-res-cleansheets').value,
-      fastestGoalTeam: document.getElementById('gen-res-fastestgoal').value,
-      totalYellowCards: document.getElementById('gen-res-yellows').value,
-      totalRedCards: document.getElementById('gen-res-reds').value,
-      totalGoals: document.getElementById('gen-res-totalgoals').value,
-    };
-    const status = document.getElementById('general-result-status');
-    if (GitHubAPI.isConfigured()) {
-      status.textContent = 'Submitting...';
-      const res = await GitHubAPI.submitGeneralResults(results);
-      status.textContent = res.success ? 'General results submitted!' : 'Error: ' + res.error;
-    } else {
-      status.textContent = 'Configure GitHub first to submit results.';
-    }
   },
 
   saveGitHubConfig() {
@@ -917,29 +865,6 @@ const App = {
     } catch (e) {
       status.textContent = `Connection failed: ${e.message}`;
       status.style.color = 'red';
-    }
-  },
-
-  async submitResult() {
-    const matchId = document.getElementById('admin-match-select').value;
-    if (!matchId) return alert('Select a match');
-    const result = {
-      homeScore: document.getElementById('res-home').value,
-      awayScore: document.getElementById('res-away').value,
-      manOfMatch: document.getElementById('res-motm').value,
-      firstGoalScorer: document.getElementById('res-fgs').value,
-      totalCards: document.getElementById('res-cards').value,
-      bothTeamsScore: document.getElementById('res-bts').value,
-    };
-    if (result.homeScore === '' || result.awayScore === '') return alert('Enter the score');
-
-    const status = document.getElementById('result-status');
-    if (GitHubAPI.isConfigured()) {
-      status.textContent = 'Submitting...';
-      const res = await GitHubAPI.submitResult(matchId, result);
-      status.textContent = res.success ? 'Result submitted!' : 'Error: ' + res.error;
-    } else {
-      status.textContent = 'Configure GitHub first to submit results.';
     }
   },
 };
