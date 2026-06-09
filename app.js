@@ -9,6 +9,8 @@ const App = {
   currentTab: 'general',
   currentCompetition: null,
   playerName: null,
+  isAdmin: false,
+  ADMIN_PASS: 'WC2026$xK9m!vR3pQ7z',
   timezone: 'CT',
   syncStatus: 'idle', // idle, syncing, error
 
@@ -23,6 +25,7 @@ const App = {
     if (savedComp && savedName) {
       this.currentCompetition = savedComp;
       this.playerName = savedName;
+      this.isAdmin = (savedName.toLowerCase() === 'admin');
       document.getElementById('login-competition').value = savedComp;
       this.showApp();
     }
@@ -69,8 +72,20 @@ const App = {
   login() {
     const comp = document.getElementById('login-competition').value;
     const name = document.getElementById('login-name').value.trim();
+    const pass = document.getElementById('login-password')?.value || '';
     if (!comp) return alert('Please select a competition pool');
     if (!name) return alert('Please enter your name');
+
+    // Admin check
+    if (name.toLowerCase() === 'admin') {
+      if (pass !== this.ADMIN_PASS) {
+        return alert('Invalid admin password');
+      }
+      this.isAdmin = true;
+    } else {
+      this.isAdmin = false;
+    }
+
     this.currentCompetition = comp;
     this.playerName = name;
     LocalStorage.setCompetition(comp);
@@ -81,6 +96,7 @@ const App = {
   logout() {
     LocalStorage.clearPlayer();
     this.playerName = null;
+    this.isAdmin = false;
     this.showLogin();
   },
 
@@ -90,6 +106,9 @@ const App = {
     document.querySelector('.nav').style.display = 'block';
     document.getElementById('user-info').style.display = 'flex';
     document.getElementById('player-name-display').textContent = this.playerName;
+    // Show/hide admin tab
+    const adminTab = document.querySelector('.nav-tab[data-tab="admin"]');
+    if (adminTab) adminTab.style.display = this.isAdmin ? '' : 'none';
     this.renderCurrentTab();
   },
 
@@ -532,10 +551,11 @@ const App = {
   // ===== LEADERBOARD =====
   async renderLeaderboard() {
     const container = document.getElementById('leaderboard-container');
-    container.innerHTML = '<h2>Leaderboard</h2><p>Loading...</p>';
+    const poolName = this.currentCompetition.charAt(0).toUpperCase() + this.currentCompetition.slice(1);
+    container.innerHTML = `<h2>Leaderboard — ${poolName} Pool</h2><p>Loading...</p>`;
 
     if (!GitHubAPI.isConfigured()) {
-      container.innerHTML = `<h2>Leaderboard</h2>
+      container.innerHTML = `<h2>Leaderboard — ${poolName} Pool</h2>
         <p>Configure GitHub API to see shared leaderboard.</p>
         <p>Currently showing local predictions only.</p>`;
       return;
@@ -543,12 +563,12 @@ const App = {
 
     const data = await GitHubAPI.getLeaderboard();
     if (!data.success) {
-      container.innerHTML = '<h2>Leaderboard</h2><p>Error loading data.</p>';
+      container.innerHTML = `<h2>Leaderboard — ${poolName} Pool</h2><p>Error loading data.</p>`;
       return;
     }
 
     const leaderboard = this.calculateLeaderboard(data.predictions, data.results, data.general);
-    let html = '<h2>Leaderboard</h2>';
+    let html = `<h2>Leaderboard — ${poolName} Pool</h2>`;
     if (leaderboard.length === 0) {
       html += '<p>No results entered yet.</p>';
     } else {
@@ -677,6 +697,10 @@ const App = {
   // ===== ADMIN =====
   renderAdmin() {
     const container = document.getElementById('admin-container');
+    if (!this.isAdmin) {
+      container.innerHTML = '<h2>Access Denied</h2><p>Admin access required.</p>';
+      return;
+    }
     container.innerHTML = `
       <h2>Admin Panel</h2>
       <div class="admin-section">

@@ -60,7 +60,10 @@
           <button class="btn btn-secondary btn-small" onclick="App.addCompetition()">+ Add</button>
         </div>
       </div>
-      <input type="text" id="login-name" placeholder="Your name" onkeypress="if(event.key==='Enter') App.login()">
+      <input type="text" id="login-name" placeholder="Your name" onkeypress="if(event.key==='Enter') App.login()" oninput="document.getElementById('admin-pass-row').style.display = this.value.trim().toLowerCase()==='admin' ? 'block' : 'none'">
+      <div id="admin-pass-row" style="display:none;">
+        <input type="password" id="login-password" placeholder="Admin password" onkeypress="if(event.key==='Enter') App.login()">
+      </div>
       <button class="btn btn-primary" onclick="App.login()">Join Competition</button>
       <p style="margin-top: 1.5rem; font-size: 0.8rem; color: var(--text-light);">
         USA / Mexico / Canada | June 11 - July 19, 2026
