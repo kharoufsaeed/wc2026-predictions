@@ -153,72 +153,83 @@ const App = {
   },
 
   // ===== GENERAL PREDICTIONS =====
+  isGeneralLocked() {
+    // Lock after June 11, 2026 (tournament start)
+    const lockDate = new Date('2026-06-11T00:00:00-04:00');
+    return new Date() >= lockDate;
+  },
+
   renderGeneralPredictions() {
     const container = document.getElementById('general-container');
     const saved = LocalStorage.getGeneralPredictions();
     const hasSaved = Object.keys(saved).length > 0;
+    const locked = this.isGeneralLocked();
+    const disabledAttr = locked ? 'disabled' : '';
+
+    const lockBanner = locked ? `<div class="lock-banner">🔒 Locked — Tournament has started. General predictions can no longer be changed.</div>` : '';
 
     container.innerHTML = `
       <h2>General Tournament Predictions</h2>
       <p class="section-desc">Make your tournament-wide predictions before the first match kicks off. These are worth big points!</p>
+      ${lockBanner}
       ${hasSaved ? this.renderSavedGeneral(saved) : ''}
       <div class="general-pred-grid">
         <div class="pred-field">
           <label>Top Scorer (Golden Boot)</label>
-          <input type="text" id="gen-topscorer" placeholder="e.g. Mbappe" value="${saved.topScorer || ''}">
+          <input type="text" id="gen-topscorer" placeholder="e.g. Mbappe" value="${saved.topScorer || ''}" ${disabledAttr}>
           <span class="points-hint">${SCORING.generalTopScorer} pts</span>
         </div>
         <div class="pred-field">
           <label>Best Player (Golden Ball)</label>
-          <input type="text" id="gen-bestplayer" placeholder="e.g. Messi" value="${saved.bestPlayer || ''}">
+          <input type="text" id="gen-bestplayer" placeholder="e.g. Messi" value="${saved.bestPlayer || ''}" ${disabledAttr}>
           <span class="points-hint">${SCORING.generalBestPlayer} pts</span>
         </div>
         <div class="pred-field">
           <label>Best Goalkeeper (Golden Glove)</label>
-          <input type="text" id="gen-goalkeeper" placeholder="e.g. Courtois" value="${saved.bestGoalkeeper || ''}">
+          <input type="text" id="gen-goalkeeper" placeholder="e.g. Courtois" value="${saved.bestGoalkeeper || ''}" ${disabledAttr}>
           <span class="points-hint">${SCORING.generalBestGoalkeeper} pts</span>
         </div>
         <div class="pred-field">
           <label>Fair Play Team</label>
-          <select id="gen-fairplay">
+          <select id="gen-fairplay" ${disabledAttr}>
             <option value="">Select team...</option>
-            ${Object.values(TEAMS).map(t => `<option value="${t.code}" ${saved.fairPlayTeam === t.code ? 'selected' : ''}>${t.code}</option>`).join('')}
+            ${Object.values(TEAMS).map(t => `<option value="${t.code}" ${saved.fairPlayTeam === t.code ? 'selected' : ''}>${t.name}</option>`).join('')}
           </select>
           <span class="points-hint">${SCORING.generalFairPlayTeam} pts</span>
         </div>
         <div class="pred-field">
           <label>Most Clean Sheets (Team)</label>
-          <select id="gen-cleansheets">
+          <select id="gen-cleansheets" ${disabledAttr}>
             <option value="">Select team...</option>
-            ${Object.values(TEAMS).map(t => `<option value="${t.code}" ${saved.mostCleanSheets === t.code ? 'selected' : ''}>${t.code}</option>`).join('')}
+            ${Object.values(TEAMS).map(t => `<option value="${t.code}" ${saved.mostCleanSheets === t.code ? 'selected' : ''}>${t.name}</option>`).join('')}
           </select>
           <span class="points-hint">${SCORING.generalMostCleanSheets} pts</span>
         </div>
         <div class="pred-field">
           <label>Fastest Goal (Team)</label>
-          <select id="gen-fastestgoal">
+          <select id="gen-fastestgoal" ${disabledAttr}>
             <option value="">Select team...</option>
-            ${Object.values(TEAMS).map(t => `<option value="${t.code}" ${saved.fastestGoalTeam === t.code ? 'selected' : ''}>${t.code}</option>`).join('')}
+            ${Object.values(TEAMS).map(t => `<option value="${t.code}" ${saved.fastestGoalTeam === t.code ? 'selected' : ''}>${t.name}</option>`).join('')}
           </select>
           <span class="points-hint">${SCORING.generalFastestGoalTeam} pts</span>
         </div>
         <div class="pred-field">
           <label>Total Yellow Cards (tournament)</label>
-          <input type="number" id="gen-yellows" placeholder="e.g. 220" value="${saved.totalYellowCards || ''}">
+          <input type="number" id="gen-yellows" placeholder="e.g. 220" value="${saved.totalYellowCards || ''}" ${disabledAttr}>
           <span class="points-hint">${SCORING.generalTotalYellowCards} pts (within 10)</span>
         </div>
         <div class="pred-field">
           <label>Total Red Cards (tournament)</label>
-          <input type="number" id="gen-reds" placeholder="e.g. 15" value="${saved.totalRedCards || ''}">
+          <input type="number" id="gen-reds" placeholder="e.g. 15" value="${saved.totalRedCards || ''}" ${disabledAttr}>
           <span class="points-hint">${SCORING.generalTotalRedCards} pts (within 3)</span>
         </div>
         <div class="pred-field">
           <label>Total Goals (tournament)</label>
-          <input type="number" id="gen-totalgoals" placeholder="e.g. 172" value="${saved.totalGoals || ''}">
+          <input type="number" id="gen-totalgoals" placeholder="e.g. 172" value="${saved.totalGoals || ''}" ${disabledAttr}>
           <span class="points-hint">${SCORING.generalTotalGoals} pts (within 10)</span>
         </div>
       </div>
-      <button class="btn btn-primary" onclick="App.saveGeneralPredictions()">Save Predictions</button>
+      ${locked ? '' : '<button class="btn btn-primary" onclick="App.saveGeneralPredictions()">Save Predictions</button>'}
       <div id="general-sync-status"></div>
     `;
   },
@@ -262,9 +273,25 @@ const App = {
   },
 
   // ===== MATCHES =====
+  matchGroupFilter: 'all',
+
+  setMatchGroupFilter(group) {
+    this.matchGroupFilter = group;
+    this.renderMatches();
+  },
+
   renderMatches() {
     const container = document.getElementById('matches-container');
+    const allGroups = Object.keys(GROUPS).sort();
+    const activeFilter = this.matchGroupFilter;
+
     let html = '<h2>Group Stage Matches</h2>';
+    html += '<div class="group-filters">';
+    html += `<button class="filter-btn ${activeFilter === 'all' ? 'active' : ''}" onclick="App.setMatchGroupFilter('all')">All</button>`;
+    allGroups.forEach(g => {
+      html += `<button class="filter-btn ${activeFilter === g ? 'active' : ''}" onclick="App.setMatchGroupFilter('${g}')">Group ${g}</button>`;
+    });
+    html += '</div>';
 
     const groups = {};
     GROUP_MATCHES.forEach(m => {
@@ -272,7 +299,10 @@ const App = {
       groups[m.group].push(m);
     });
 
-    Object.keys(groups).sort().forEach(g => {
+    const displayGroups = activeFilter === 'all' ? allGroups : [activeFilter];
+
+    displayGroups.forEach(g => {
+      if (!groups[g]) return;
       html += `<h3>Group ${g}</h3><div class="matches-list">`;
       groups[g].forEach(match => {
         const home = TEAMS[match.home];
@@ -450,9 +480,34 @@ const App = {
   renderMyPredictions() {
     const container = document.getElementById('predictions-container');
     const predictions = LocalStorage.getAllPredictions();
+    const general = LocalStorage.getGeneralPredictions();
     const count = Object.keys(predictions).length;
+    const hasGeneral = Object.keys(general).length > 0;
 
-    let html = `<h2>My Predictions</h2><p>${count} of ${GROUP_MATCHES.length} group matches predicted</p>`;
+    let html = `<h2>My Predictions</h2>`;
+
+    // General predictions summary
+    html += '<h3>General Tournament Predictions</h3>';
+    if (hasGeneral) {
+      html += `<div class="my-general-summary">
+        <div class="saved-general-grid">
+          <div class="saved-item"><strong>Top Scorer:</strong> ${general.topScorer || '-'}</div>
+          <div class="saved-item"><strong>Best Player:</strong> ${general.bestPlayer || '-'}</div>
+          <div class="saved-item"><strong>Best GK:</strong> ${general.bestGoalkeeper || '-'}</div>
+          <div class="saved-item"><strong>Fair Play:</strong> ${general.fairPlayTeam ? flagIcon(TEAMS[general.fairPlayTeam]?.flag) + ' ' + general.fairPlayTeam : '-'}</div>
+          <div class="saved-item"><strong>Clean Sheets:</strong> ${general.mostCleanSheets ? flagIcon(TEAMS[general.mostCleanSheets]?.flag) + ' ' + general.mostCleanSheets : '-'}</div>
+          <div class="saved-item"><strong>Fastest Goal:</strong> ${general.fastestGoalTeam ? flagIcon(TEAMS[general.fastestGoalTeam]?.flag) + ' ' + general.fastestGoalTeam : '-'}</div>
+          <div class="saved-item"><strong>Yellow Cards:</strong> ${general.totalYellowCards || '-'}</div>
+          <div class="saved-item"><strong>Red Cards:</strong> ${general.totalRedCards || '-'}</div>
+          <div class="saved-item"><strong>Total Goals:</strong> ${general.totalGoals || '-'}</div>
+        </div>
+      </div>`;
+    } else {
+      html += '<p class="section-desc">No general predictions yet. Go to the General Predictions tab to make yours.</p>';
+    }
+
+    // Match predictions
+    html += `<h3>Match Predictions</h3><p>${count} of ${GROUP_MATCHES.length} group matches predicted</p>`;
     if (count > 0) {
       html += '<div class="predictions-list">';
       Object.entries(predictions).forEach(([matchId, pred]) => {
@@ -670,7 +725,84 @@ const App = {
           <button class="btn btn-primary" onclick="App.submitResult()">Submit Result</button>
           <div id="result-status"></div>
         </div>
+      </div>
+      <div class="admin-section">
+        <h3>General Predictions - Actual Results</h3>
+        <p class="section-desc">Enter actual tournament-wide results to score general predictions.</p>
+        <div class="admin-results">
+          <div class="general-pred-grid">
+            <div class="pred-field">
+              <label>Top Scorer (Golden Boot)</label>
+              <input type="text" id="gen-res-topscorer" placeholder="Player name">
+            </div>
+            <div class="pred-field">
+              <label>Best Player (Golden Ball)</label>
+              <input type="text" id="gen-res-bestplayer" placeholder="Player name">
+            </div>
+            <div class="pred-field">
+              <label>Best Goalkeeper (Golden Glove)</label>
+              <input type="text" id="gen-res-goalkeeper" placeholder="Player name">
+            </div>
+            <div class="pred-field">
+              <label>Fair Play Team</label>
+              <select id="gen-res-fairplay">
+                <option value="">Select team...</option>
+                ${Object.values(TEAMS).map(t => `<option value="${t.code}">${t.name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="pred-field">
+              <label>Most Clean Sheets (Team)</label>
+              <select id="gen-res-cleansheets">
+                <option value="">Select team...</option>
+                ${Object.values(TEAMS).map(t => `<option value="${t.code}">${t.name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="pred-field">
+              <label>Fastest Goal (Team)</label>
+              <select id="gen-res-fastestgoal">
+                <option value="">Select team...</option>
+                ${Object.values(TEAMS).map(t => `<option value="${t.code}">${t.name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="pred-field">
+              <label>Total Yellow Cards (tournament)</label>
+              <input type="number" id="gen-res-yellows" placeholder="e.g. 220">
+            </div>
+            <div class="pred-field">
+              <label>Total Red Cards (tournament)</label>
+              <input type="number" id="gen-res-reds" placeholder="e.g. 15">
+            </div>
+            <div class="pred-field">
+              <label>Total Goals (tournament)</label>
+              <input type="number" id="gen-res-totalgoals" placeholder="e.g. 172">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="App.submitGeneralResults()">Submit General Results</button>
+          <div id="general-result-status"></div>
+        </div>
       </div>`;
+  },
+
+  async submitGeneralResults() {
+    const results = {
+      topScorer: document.getElementById('gen-res-topscorer').value.trim(),
+      bestPlayer: document.getElementById('gen-res-bestplayer').value.trim(),
+      bestGoalkeeper: document.getElementById('gen-res-goalkeeper').value.trim(),
+      fairPlayTeam: document.getElementById('gen-res-fairplay').value,
+      mostCleanSheets: document.getElementById('gen-res-cleansheets').value,
+      fastestGoalTeam: document.getElementById('gen-res-fastestgoal').value,
+      totalYellowCards: document.getElementById('gen-res-yellows').value,
+      totalRedCards: document.getElementById('gen-res-reds').value,
+      totalGoals: document.getElementById('gen-res-totalgoals').value,
+    };
+    const status = document.getElementById('general-result-status');
+    if (GitHubAPI.isConfigured()) {
+      status.textContent = 'Submitting...';
+      const res = await GitHubAPI.submitGeneralResults(results);
+      status.textContent = res.success ? 'General results submitted!' : 'Error: ' + res.error;
+    } else {
+      status.textContent = 'Configure GitHub first to submit results.';
+    }
   },
 
   saveGitHubConfig() {

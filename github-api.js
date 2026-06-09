@@ -15,6 +15,7 @@ const GitHubAPI = {
     predictions: (comp) => `data/${comp}/predictions.json`,
     results: (comp) => `data/${comp}/results.json`,
     general: (comp) => `data/${comp}/general.json`,
+    generalResults: (comp) => `data/${comp}/general_results.json`,
     brackets: (comp) => `data/${comp}/brackets.json`,
   },
 
@@ -164,6 +165,14 @@ const GitHubAPI = {
     const comp = LocalStorage.getCompetition();
     const { data } = await this.readFile(this.PATHS.general(comp));
     return { success: true, data: data || {} };
+  },
+
+  // Submit general prediction results (admin)
+  async submitGeneralResults(results) {
+    const comp = LocalStorage.getCompetition();
+    const path = this.PATHS.generalResults(comp);
+    const { sha } = await this.readFile(path);
+    return await this.writeFile(path, { ...results, timestamp: new Date().toISOString() }, sha, 'General results updated');
   },
 };
 
