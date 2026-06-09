@@ -34,7 +34,7 @@ body {
 /* Banner */
 .site-banner {
   width: 100%;
-  height: 120px;
+  height: 180px;
   background: url('pictures/8b3a7cbf-911c-4809-a084-368496c1d04c.webp') center/cover no-repeat;
   display: block;
 }
@@ -511,6 +511,20 @@ body {
   background: var(--primary);
   color: white;
   border-color: var(--primary);
+}
+.filter-btn.knockout-btn {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.filter-btn.knockout-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+.filter-btn.knockout-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
 }
 
 /* My Predictions - General Summary */

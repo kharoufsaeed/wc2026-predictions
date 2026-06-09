@@ -341,66 +341,74 @@ const App = {
     const allGroups = Object.keys(GROUPS).sort();
     const activeFilter = this.matchGroupFilter;
 
-    let html = '<h2>Group Stage Matches</h2>';
+    let html = '<h2>Matches</h2>';
     html += '<div class="group-filters">';
     html += `<button class="filter-btn ${activeFilter === 'all' ? 'active' : ''}" onclick="App.setMatchGroupFilter('all')">All</button>`;
     allGroups.forEach(g => {
       html += `<button class="filter-btn ${activeFilter === g ? 'active' : ''}" onclick="App.setMatchGroupFilter('${g}')">Group ${g}</button>`;
     });
+    html += `<button class="filter-btn knockout-btn ${activeFilter === 'knockout' ? 'active' : ''}" onclick="App.setMatchGroupFilter('knockout')">Knockout</button>`;
     html += '</div>';
 
-    const groups = {};
-    GROUP_MATCHES.forEach(m => {
-      if (!groups[m.group]) groups[m.group] = [];
-      groups[m.group].push(m);
-    });
+    // Group stage
+    if (activeFilter !== 'knockout') {
+      const groups = {};
+      GROUP_MATCHES.forEach(m => {
+        if (!groups[m.group]) groups[m.group] = [];
+        groups[m.group].push(m);
+      });
 
-    const displayGroups = activeFilter === 'all' ? allGroups : [activeFilter];
+      const displayGroups = activeFilter === 'all' ? allGroups : [activeFilter];
 
-    displayGroups.forEach(g => {
-      if (!groups[g]) return;
-      html += `<h3>Group ${g}</h3><div class="matches-list">`;
-      groups[g].forEach(match => {
-        const home = TEAMS[match.home];
-        const away = TEAMS[match.away];
-        const pred = LocalStorage.getPrediction(match.id);
-        const predClass = pred ? 'has-prediction' : '';
+      displayGroups.forEach(g => {
+        if (!groups[g]) return;
+        html += `<h3>Group ${g}</h3><div class="matches-list">`;
+        groups[g].forEach(match => {
+          const home = TEAMS[match.home];
+          const away = TEAMS[match.away];
+          const pred = LocalStorage.getPrediction(match.id);
+          const predClass = pred ? 'has-prediction' : '';
+          html += `
+            <div class="match-card ${predClass}" onclick="App.openPredictionModal('${match.id}')">
+              <div class="match-header">
+                <span class="match-id">${match.id}</span>
+                <span class="match-datetime">${this.formatDateTime(match.date, match.time)}</span>
+              </div>
+              <div class="match-teams">
+                <span class="team">${flagIcon(home.flag)} ${home.code}</span>
+                <span class="vs">vs</span>
+                <span class="team">${flagIcon(away.flag)} ${away.code}</span>
+              </div>
+              <div class="match-venue">${VENUES[match.venue] || match.venue}</div>
+              ${pred ? `<div class="prediction-badge">${pred.homeScore}-${pred.awayScore}</div>` : '<div class="prediction-badge empty">No prediction</div>'}
+            </div>`;
+        });
+        html += '</div>';
+      });
+    }
+
+    // Knockout stage
+    if (activeFilter === 'all' || activeFilter === 'knockout') {
+      html += '<h2>Knockout Stage</h2><div class="matches-list">';
+      KNOCKOUT_MATCHES.forEach(match => {
         html += `
-          <div class="match-card ${predClass}" onclick="App.openPredictionModal('${match.id}')">
+          <div class="match-card knockout">
             <div class="match-header">
               <span class="match-id">${match.id}</span>
+              <span class="match-round">${match.round}</span>
               <span class="match-datetime">${this.formatDateTime(match.date, match.time)}</span>
             </div>
             <div class="match-teams">
-              <span class="team">${flagIcon(home.flag)} ${home.code}</span>
+              <span class="team">${match.home}</span>
               <span class="vs">vs</span>
-              <span class="team">${flagIcon(away.flag)} ${away.code}</span>
+              <span class="team">${match.away}</span>
             </div>
-            <div class="match-venue">${VENUES[match.venue] || match.venue}</div>
-            ${pred ? `<div class="prediction-badge">${pred.homeScore}-${pred.awayScore}</div>` : '<div class="prediction-badge empty">No prediction</div>'}
+            <div class="match-venue">${match.venue}</div>
           </div>`;
       });
       html += '</div>';
-    });
+    }
 
-    html += '<h2>Knockout Stage</h2><div class="matches-list">';
-    KNOCKOUT_MATCHES.forEach(match => {
-      html += `
-        <div class="match-card knockout">
-          <div class="match-header">
-            <span class="match-id">${match.id}</span>
-            <span class="match-round">${match.round}</span>
-            <span class="match-datetime">${this.formatDateTime(match.date, match.time)}</span>
-          </div>
-          <div class="match-teams">
-            <span class="team">${match.home}</span>
-            <span class="vs">vs</span>
-            <span class="team">${match.away}</span>
-          </div>
-          <div class="match-venue">${match.venue}</div>
-        </div>`;
-    });
-    html += '</div>';
     container.innerHTML = html;
   },
 
