@@ -24,13 +24,41 @@
         <div class="tz-selector" id="tz-selector">
           <label>TZ:</label>
           <select id="tz-select" onchange="App.setTimezone(this.value)">
-            <option value="ET">ET</option>
-            <option value="CT" selected>CT</option>
-            <option value="MT">MT</option>
-            <option value="PT">PT</option>
-            <option value="GMT">GMT</option>
-            <option value="CET">CET</option>
-            <option value="AST">AST</option>
+            <optgroup label="── Americas ──">
+              <option value="HT">HT — Hawaii (UTC-10)</option>
+              <option value="AKT">AKT — Alaska (UTC-8)</option>
+              <option value="PT">PT — Pacific (UTC-7)</option>
+              <option value="MT">MT — Mountain (UTC-6)</option>
+              <option value="CT" selected>CT — Central (UTC-5)</option>
+              <option value="ET">ET — Eastern (UTC-4)</option>
+              <option value="AT">AT — Atlantic/Canada (UTC-3)</option>
+              <option value="BRT">BRT — Brazil (UTC-3)</option>
+              <option value="ART">ART — Argentina (UTC-3)</option>
+            </optgroup>
+            <optgroup label="── Europe & Africa ──">
+              <option value="UTC">UTC — UTC / Iceland (UTC+0)</option>
+              <option value="BST">BST — UK &amp; Ireland Summer (UTC+1)</option>
+              <option value="CEST">CEST — Central Europe Summer (UTC+2)</option>
+              <option value="EEST">EEST — Eastern Europe Summer (UTC+3)</option>
+              <option value="MSK">MSK — Moscow / Arabia (UTC+3)</option>
+              <option value="EAT">EAT — East Africa (UTC+3)</option>
+              <option value="GST">GST — Gulf: UAE, Qatar (UTC+4)</option>
+            </optgroup>
+            <optgroup label="── Asia ──">
+              <option value="PKT">PKT — Pakistan (UTC+5)</option>
+              <option value="IST">IST — India / Sri Lanka (UTC+5:30)</option>
+              <option value="BDT">BDT — Bangladesh (UTC+6)</option>
+              <option value="MMT">MMT — Myanmar (UTC+6:30)</option>
+              <option value="ICT">ICT — Thailand / Vietnam (UTC+7)</option>
+              <option value="CST">CST — China / Singapore (UTC+8)</option>
+              <option value="JST">JST — Japan (UTC+9)</option>
+              <option value="KST">KST — Korea (UTC+9)</option>
+            </optgroup>
+            <optgroup label="── Pacific ──">
+              <option value="ACST">ACST — Australia Central (UTC+9:30)</option>
+              <option value="AEST">AEST — Australia Eastern (UTC+10)</option>
+              <option value="NZST">NZST — New Zealand (UTC+12)</option>
+            </optgroup>
           </select>
         </div>
         <span class="name" id="player-name-display"></span>

@@ -197,11 +197,9 @@ const App = {
   convertTime(dateStr, timeStr) {
     const offset = TIMEZONE_OFFSETS[this.timezone] || 0;
     const [h, m] = timeStr.split(':').map(Number);
-    let newH = h + offset;
-    let newDate = dateStr;
-    if (newH < 0) { newH += 24; /* prev day - simplified */ }
-    if (newH >= 24) { newH -= 24; }
-    return `${String(newH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const totalMins = h * 60 + m + Math.round(offset * 60);
+    const norm = ((totalMins % 1440) + 1440) % 1440;
+    return `${String(Math.floor(norm / 60)).padStart(2, '0')}:${String(norm % 60).padStart(2, '0')}`;
   },
 
   formatDateTime(dateStr, timeStr) {

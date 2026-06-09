@@ -266,13 +266,40 @@ const SCORING = {
   generalTotalPitchInvaders: 5,
 };
 
-// Timezone offsets from ET (hours)
+// Timezone offsets from ET (EDT = UTC-4, used during the World Cup June-July)
 const TIMEZONE_OFFSETS = {
-  'ET': 0,
-  'CT': -1,
-  'MT': -2,
-  'PT': -3,
-  'GMT': 5,
-  'CET': 6,
-  'AST': 4,
+  // ── Americas ──────────────────────────────
+  'HT':    -6,    // Hawaii (HST = UTC-10)
+  'AKT':   -4,    // Alaska (AKDT = UTC-8)
+  'PT':    -3,    // Pacific (PDT = UTC-7)
+  'MT':    -2,    // Mountain (MDT = UTC-6)
+  'CT':    -1,    // Central (CDT = UTC-5)
+  'ET':     0,    // Eastern (EDT = UTC-4)
+  'AT':     1,    // Atlantic/Canada (ADT = UTC-3)
+  'BRT':    1,    // Brazil (BRT = UTC-3)
+  'ART':    1,    // Argentina (ART = UTC-3)
+  // ── Europe & Africa ───────────────────────
+  'UTC':    4,    // UTC / Iceland / Ghana (UTC+0)
+  'BST':    5,    // UK & Ireland Summer (BST = UTC+1)
+  'CEST':   6,    // Central Europe Summer (CEST = UTC+2)
+  'EEST':   7,    // Eastern Europe Summer (EEST = UTC+3)
+  'MSK':    7,    // Moscow / Saudi / Kuwait (UTC+3)
+  'EAT':    7,    // East Africa (Nairobi UTC+3)
+  'GST':    8,    // Gulf — UAE, Qatar, Oman (UTC+4)
+  // ── Asia ──────────────────────────────────
+  'PKT':    9,    // Pakistan (UTC+5)
+  'IST':    9.5,  // India / Sri Lanka (UTC+5:30)
+  'BDT':   10,    // Bangladesh (UTC+6)
+  'MMT':   10.5,  // Myanmar (UTC+6:30)
+  'ICT':   11,    // Thailand / Vietnam / Indonesia West (UTC+7)
+  'CST':   12,    // China / Singapore / HK / Philippines (UTC+8)
+  'JST':   13,    // Japan (UTC+9)
+  'KST':   13,    // Korea (UTC+9)
+  'AEST':  14,    // Australia Eastern (AEST = UTC+10)
+  'ACST':  13.5,  // Australia Central (ACST = UTC+9:30)
+  'NZST':  16,    // New Zealand (NZST = UTC+12)
+  // ── Legacy (kept for backward compatibility) ──
+  'GMT':    5,    // (legacy — mapped as BST/UTC+1 in original code)
+  'CET':    6,    // (legacy — mapped as CEST/UTC+2)
+  'AST':    4,    // (legacy — ambiguous, UTC+0 offset)
 };
