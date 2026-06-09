@@ -1,5 +1,10 @@
 // FIFA World Cup 2026 Prediction App - GitHub Backend Version
 
+// Helper: render flag icon from ISO code
+function flagIcon(isoCode) {
+  return `<span class="fi fi-${isoCode}"></span>`;
+}
+
 const App = {
   currentTab: 'general',
   currentCompetition: null,
@@ -177,7 +182,7 @@ const App = {
           <label>Fair Play Team</label>
           <select id="gen-fairplay">
             <option value="">Select team...</option>
-            ${Object.values(TEAMS).map(t => `<option value="${t.code}" ${saved.fairPlayTeam === t.code ? 'selected' : ''}>${t.flag} ${t.code}</option>`).join('')}
+            ${Object.values(TEAMS).map(t => `<option value="${t.code}" ${saved.fairPlayTeam === t.code ? 'selected' : ''}>${t.code}</option>`).join('')}
           </select>
           <span class="points-hint">${SCORING.generalFairPlayTeam} pts</span>
         </div>
@@ -185,7 +190,7 @@ const App = {
           <label>Most Clean Sheets (Team)</label>
           <select id="gen-cleansheets">
             <option value="">Select team...</option>
-            ${Object.values(TEAMS).map(t => `<option value="${t.code}" ${saved.mostCleanSheets === t.code ? 'selected' : ''}>${t.flag} ${t.code}</option>`).join('')}
+            ${Object.values(TEAMS).map(t => `<option value="${t.code}" ${saved.mostCleanSheets === t.code ? 'selected' : ''}>${t.code}</option>`).join('')}
           </select>
           <span class="points-hint">${SCORING.generalMostCleanSheets} pts</span>
         </div>
@@ -193,7 +198,7 @@ const App = {
           <label>Fastest Goal (Team)</label>
           <select id="gen-fastestgoal">
             <option value="">Select team...</option>
-            ${Object.values(TEAMS).map(t => `<option value="${t.code}" ${saved.fastestGoalTeam === t.code ? 'selected' : ''}>${t.flag} ${t.code}</option>`).join('')}
+            ${Object.values(TEAMS).map(t => `<option value="${t.code}" ${saved.fastestGoalTeam === t.code ? 'selected' : ''}>${t.code}</option>`).join('')}
           </select>
           <span class="points-hint">${SCORING.generalFastestGoalTeam} pts</span>
         </div>
@@ -223,9 +228,9 @@ const App = {
       <div class="saved-item"><strong>Top Scorer:</strong> ${saved.topScorer || '-'}</div>
       <div class="saved-item"><strong>Best Player:</strong> ${saved.bestPlayer || '-'}</div>
       <div class="saved-item"><strong>Best GK:</strong> ${saved.bestGoalkeeper || '-'}</div>
-      <div class="saved-item"><strong>Fair Play:</strong> ${saved.fairPlayTeam ? TEAMS[saved.fairPlayTeam]?.flag + ' ' + saved.fairPlayTeam : '-'}</div>
-      <div class="saved-item"><strong>Clean Sheets:</strong> ${saved.mostCleanSheets ? TEAMS[saved.mostCleanSheets]?.flag + ' ' + saved.mostCleanSheets : '-'}</div>
-      <div class="saved-item"><strong>Fastest Goal:</strong> ${saved.fastestGoalTeam ? TEAMS[saved.fastestGoalTeam]?.flag + ' ' + saved.fastestGoalTeam : '-'}</div>
+      <div class="saved-item"><strong>Fair Play:</strong> ${saved.fairPlayTeam ? flagIcon(TEAMS[saved.fairPlayTeam]?.flag) + ' ' + saved.fairPlayTeam : '-'}</div>
+      <div class="saved-item"><strong>Clean Sheets:</strong> ${saved.mostCleanSheets ? flagIcon(TEAMS[saved.mostCleanSheets]?.flag) + ' ' + saved.mostCleanSheets : '-'}</div>
+      <div class="saved-item"><strong>Fastest Goal:</strong> ${saved.fastestGoalTeam ? flagIcon(TEAMS[saved.fastestGoalTeam]?.flag) + ' ' + saved.fastestGoalTeam : '-'}</div>
       <div class="saved-item"><strong>Yellow Cards:</strong> ${saved.totalYellowCards || '-'}</div>
       <div class="saved-item"><strong>Red Cards:</strong> ${saved.totalRedCards || '-'}</div>
       <div class="saved-item"><strong>Total Goals:</strong> ${saved.totalGoals || '-'}</div>
@@ -281,11 +286,11 @@ const App = {
               <span class="match-datetime">${this.formatDateTime(match.date, match.time)}</span>
             </div>
             <div class="match-teams">
-              <span class="team">${home.flag} ${home.code}</span>
+              <span class="team">${flagIcon(home.flag)} ${home.code}</span>
               <span class="vs">vs</span>
-              <span class="team">${away.flag} ${away.code}</span>
+              <span class="team">${flagIcon(away.flag)} ${away.code}</span>
             </div>
-            <div class="match-venue">${match.venue}</div>
+            <div class="match-venue">${VENUES[match.venue] || match.venue}</div>
             ${pred ? `<div class="prediction-badge">${pred.homeScore}-${pred.awayScore}</div>` : '<div class="prediction-badge empty">No prediction</div>'}
           </div>`;
       });
@@ -324,7 +329,7 @@ const App = {
     const modal = document.getElementById('prediction-modal');
     modal.innerHTML = `
       <div class="modal-content">
-        <h3>${home.flag} ${home.code} vs ${away.flag} ${away.code}</h3>
+        <h3>${flagIcon(home.flag)} ${home.code} vs ${flagIcon(away.flag)} ${away.code}</h3>
         <p>${this.formatDateTime(match.date, match.time)} | ${match.venue}</p>
         <div class="pred-form">
           <div class="score-row">
@@ -406,7 +411,7 @@ const App = {
             <tbody>
               ${standings.map((t, i) => `
                 <tr class="${i < 2 ? 'qualified' : i === 2 ? 'third-place' : ''}">
-                  <td>${TEAMS[t.team].flag} ${t.team}</td>
+                  <td>${flagIcon(TEAMS[t.team].flag)} ${t.team}</td>
                   <td>${t.played}</td><td>${t.won}</td><td>${t.drawn}</td><td>${t.lost}</td>
                   <td>${t.gd > 0 ? '+' : ''}${t.gd}</td><td><strong>${t.points}</strong></td>
                 </tr>`).join('')}
@@ -457,7 +462,7 @@ const App = {
         const away = TEAMS[match.away];
         html += `
           <div class="prediction-item" onclick="App.openPredictionModal('${matchId}')">
-            <span class="pred-match">${home.flag} ${home.code} ${pred.homeScore}-${pred.awayScore} ${away.code} ${away.flag}</span>
+            <span class="pred-match">${flagIcon(home.flag)} ${home.code} ${pred.homeScore}-${pred.awayScore} ${away.code} ${flagIcon(away.flag)}</span>
             <span class="pred-extras-summary">
               ${pred.manOfMatch ? 'MOTM: ' + pred.manOfMatch : ''}
               ${pred.firstGoalScorer ? '| FGS: ' + pred.firstGoalScorer : ''}
