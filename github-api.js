@@ -3,10 +3,12 @@
 
 const GitHubAPI = {
   // CONFIGURE THESE after creating your repo:
-  OWNER: 'YOUR_GITHUB_USERNAME',
+  OWNER: 'skharouf',
   REPO: 'wc2026-predictions',
   BRANCH: 'main',
   TOKEN: '', // Set via Settings modal - stored in localStorage
+  // GitHub Enterprise base URL (use 'https://api.github.com' for public GitHub)
+  API_BASE: 'https://github.qualcomm.com/api/v3',
 
   // Data file paths in the repo
   PATHS: {
@@ -25,7 +27,7 @@ const GitHubAPI = {
   },
 
   isConfigured() {
-    return this.getToken() && this.OWNER !== 'YOUR_GITHUB_USERNAME';
+    return !!this.getToken();
   },
 
   headers() {
@@ -39,7 +41,7 @@ const GitHubAPI = {
   // Read a JSON file from the repo
   async readFile(path) {
     try {
-      const url = `https://api.github.com/repos/${this.OWNER}/${this.REPO}/contents/${path}?ref=${this.BRANCH}`;
+      const url = `${this.API_BASE}/repos/${this.OWNER}/${this.REPO}/contents/${path}?ref=${this.BRANCH}`;
       const response = await fetch(url, { headers: this.headers() });
       if (response.status === 404) return { data: null, sha: null };
       if (!response.ok) throw new Error(`GitHub API error: ${response.status}`);
@@ -55,7 +57,7 @@ const GitHubAPI = {
   // Write a JSON file to the repo
   async writeFile(path, data, sha, message) {
     try {
-      const url = `https://api.github.com/repos/${this.OWNER}/${this.REPO}/contents/${path}`;
+      const url = `${this.API_BASE}/repos/${this.OWNER}/${this.REPO}/contents/${path}`;
       const body = {
         message: message || `Update ${path}`,
         content: btoa(JSON.stringify(data, null, 2)),

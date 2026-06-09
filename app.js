@@ -684,7 +684,7 @@ const App = {
     const status = document.getElementById('config-status');
     status.textContent = 'Testing...';
     try {
-      const url = `https://api.github.com/repos/${GitHubAPI.OWNER}/${GitHubAPI.REPO}`;
+      const url = `${GitHubAPI.API_BASE}/repos/${GitHubAPI.OWNER}/${GitHubAPI.REPO}`;
       const resp = await fetch(url, { headers: GitHubAPI.headers() });
       if (resp.ok) {
         status.textContent = 'Connected successfully!';
