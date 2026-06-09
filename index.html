@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FIFA World Cup 2026 - Prediction Competition</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <h1><span class="trophy">🏆</span> WC 2026 Predictions</h1>
+      <div class="user-info" id="user-info" style="display: none;">
+        <div class="tz-selector" id="tz-selector">
+          <label>TZ:</label>
+          <select id="tz-select" onchange="App.setTimezone(this.value)">
+            <option value="ET">ET</option>
+            <option value="CT" selected>CT</option>
+            <option value="MT">MT</option>
+            <option value="PT">PT</option>
+            <option value="GMT">GMT</option>
+            <option value="CET">CET</option>
+            <option value="AST">AST</option>
+          </select>
+        </div>
+        <span class="name" id="player-name-display"></span>
+        <button class="logout-btn" onclick="App.logout()">Switch User</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation -->
+  <nav class="nav" style="display: none;">
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-tab="general">General Predictions</button>
+      <button class="nav-tab" data-tab="matches">Matches</button>
+      <button class="nav-tab" data-tab="standings">Standings</button>
+      <button class="nav-tab" data-tab="predictions">My Predictions</button>
+      <button class="nav-tab" data-tab="leaderboard">Leaderboard</button>
+      <button class="nav-tab" data-tab="bracket">Bracket</button>
+      <button class="nav-tab" data-tab="rules">Scoring Rules</button>
+      <button class="nav-tab" data-tab="admin">Admin</button>
+    </div>
+  </nav>
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <h2>🏆 World Cup 2026</h2>
+      <h3 style="color: var(--text-light); font-weight: 400; margin-bottom: 0.5rem;">Prediction Competition</h3>
+      <p>Select your competition and enter your name</p>
+      <div class="competition-select">
+        <select id="login-competition">
+          <option value="" disabled selected>Choose competition...</option>
+        </select>
+        <div class="competition-actions">
+          <input type="text" id="new-competition-name" placeholder="New pool name" class="comp-input">
+          <button class="btn btn-secondary btn-small" onclick="App.addCompetition()">+ Add</button>
+        </div>
+      </div>
+      <input type="text" id="login-name" placeholder="Your name" onkeypress="if(event.key==='Enter') App.login()">
+      <button class="btn btn-primary" onclick="App.login()">Join Competition</button>
+      <p style="margin-top: 1.5rem; font-size: 0.8rem; color: var(--text-light);">
+        USA / Mexico / Canada | June 11 - July 19, 2026
+      </p>
+    </div>
+  </div>
+
+  <!-- Main App Content -->
+  <main class="main" id="app-content" style="display: none;">
+    <div class="tab-content active" id="tab-general">
+      <div id="general-container"></div>
+    </div>
+    <div class="tab-content" id="tab-matches">
+      <div id="matches-container"></div>
+    </div>
+    <div class="tab-content" id="tab-standings">
+      <div id="standings-container"></div>
+    </div>
+    <div class="tab-content" id="tab-predictions">
+      <div id="predictions-container"></div>
+    </div>
+    <div class="tab-content" id="tab-leaderboard">
+      <div id="leaderboard-container"></div>
+    </div>
+    <div class="tab-content" id="tab-bracket">
+      <div id="bracket-container"></div>
+    </div>
+    <div class="tab-content" id="tab-rules">
+      <div id="rules-container"></div>
+    </div>
+    <div class="tab-content" id="tab-admin">
+      <div id="admin-container"></div>
+    </div>
+  </main>
+
+  <!-- Prediction Modal -->
+  <div class="modal-overlay" id="prediction-modal" onclick="if(event.target===this) App.closeModal()"></div>
+
+  <!-- Scripts -->
+  <script src="matches.js"></script>
+  <script src="github-api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
