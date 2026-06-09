@@ -34,8 +34,10 @@ body {
 /* Banner */
 .site-banner {
   width: 100%;
-  height: 180px;
-  background: url('pictures/8b3a7cbf-911c-4809-a084-368496c1d04c.webp') center/cover no-repeat;
+  height: 0;
+  padding-bottom: 12%;
+  background: url('pictures/8b3a7cbf-911c-4809-a084-368496c1d04c.webp') center/contain no-repeat;
+  background-color: var(--primary-dark);
   display: block;
 }
 
@@ -69,16 +71,16 @@ body {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.05);
   padding: 0.3rem 0.6rem;
   border-radius: 6px;
 }
 
-.tz-selector label { font-size: 0.75rem; opacity: 0.8; }
+.tz-selector label { font-size: 0.75rem; color: var(--text); }
 .tz-selector select {
-  background: rgba(255,255,255,0.2);
-  color: white;
-  border: none;
+  background: var(--card-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
   font-size: 0.8rem;
