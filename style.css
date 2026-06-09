@@ -37,7 +37,6 @@ body {
   height: 0;
   padding-bottom: 12%;
   background: url('pictures/8b3a7cbf-911c-4809-a084-368496c1d04c.webp') center/contain no-repeat;
-  background-color: #6a0dad;
   position: relative;
   display: block;
   overflow: hidden;
@@ -53,11 +52,11 @@ body {
 }
 .site-banner::before {
   left: 0;
-  background: #5a0dcc;
+  background: #6800E8;
 }
 .site-banner::after {
   right: 0;
-  background: #c3e000;
+  background: #ADED29;
 }
 
 .header-content {
