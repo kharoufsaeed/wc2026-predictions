@@ -45,9 +45,9 @@ body {
 .site-banner h1 {
   position: absolute;
   top: 50%;
-  left: 4%;
+  left: 22%;
   transform: translateY(-50%);
-  color: white;
+  color: #ffffff !important;
   font-size: clamp(1.4rem, 3.5vw, 3rem);
   font-weight: 800;
   text-shadow: 0 2px 8px rgba(0,0,0,0.45);
