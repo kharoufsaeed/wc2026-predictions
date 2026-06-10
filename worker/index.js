@@ -131,7 +131,7 @@ export default {
           headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' },
         });
         const info = await resp.json().catch(() => ({}));
-        return new Response(JSON.stringify({ status: resp.status, message: info.message || 'ok', hasToken: !!token }), {
+        return new Response(JSON.stringify({ status: resp.status, message: info.message || 'no message', body: info, hasToken: !!token, tokenPrefix: token ? token.substring(0, 10) + '...' : null }), {
           status: 200, headers: { ...CORS, 'Content-Type': 'application/json' },
         });
       }
