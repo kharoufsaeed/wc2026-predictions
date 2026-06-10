@@ -28,7 +28,10 @@ async function ghRead(path, token) {
     { headers }
   );
   if (resp.status === 404) return { data: null, sha: null };
-  if (!resp.ok) throw new Error(`GitHub read ${resp.status}: ${path}`);
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({}));
+    throw new Error(`GitHub read ${resp.status}: ${body.message || path}`);
+  }
   const file = await resp.json();
   return { data: JSON.parse(atob(file.content.replace(/\n/g, ''))), sha: file.sha };
 }
