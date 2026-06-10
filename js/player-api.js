@@ -3,7 +3,7 @@
 //
 // After deploying the worker (see worker/wrangler.toml), paste your Worker URL below.
 const PlayerAPI = {
-  WORKER_URL: 'https://wc2026-predictions-game.workers.dev',
+  WORKER_URL: 'https://wc2026-predictions-game.wc2026-predictions-game.workers.dev',
 
   async _post(action, data) {
     try {
