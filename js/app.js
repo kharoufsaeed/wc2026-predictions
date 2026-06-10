@@ -871,7 +871,7 @@ const App = {
           </div>
           <div class="pred-field">
             <label>Personal Access Token</label>
-            <input type="password" id="cfg-token" placeholder="ghp_xxxxxxxxxxxx" value="${GitHubAPI.getToken()}">
+            <input type="password" id="cfg-token" placeholder="${GitHubAPI.isConfigured() ? '(token saved — enter new one to replace)' : 'ghp_xxxxxxxxxxxx'}">
             <span class="points-hint">Fine-grained token with repo contents read/write</span>
           </div>
           <button class="btn btn-primary" onclick="App.saveGitHubConfig()">Save Configuration</button>
@@ -1033,6 +1033,12 @@ const App = {
 
 // Initialize on load
 window.addEventListener('DOMContentLoaded', () => {
+  // Migrate any token previously stored in localStorage to sessionStorage, then remove it
+  const legacyToken = localStorage.getItem('wc2026_github_token');
+  if (legacyToken) {
+    sessionStorage.setItem('wc2026_github_token', legacyToken);
+    localStorage.removeItem('wc2026_github_token');
+  }
   // Restore GitHub config from localStorage
   const savedOwner = localStorage.getItem('wc2026_github_owner');
   const savedRepo = localStorage.getItem('wc2026_github_repo');

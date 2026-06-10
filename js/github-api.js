@@ -20,11 +20,11 @@ const GitHubAPI = {
   },
 
   getToken() {
-    return localStorage.getItem('wc2026_github_token') || this.TOKEN;
+    return sessionStorage.getItem('wc2026_github_token') || this.TOKEN;
   },
 
   setToken(token) {
-    localStorage.setItem('wc2026_github_token', token);
+    sessionStorage.setItem('wc2026_github_token', token);
   },
 
   isConfigured() {
