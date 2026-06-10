@@ -122,7 +122,7 @@ export default {
 
     try {
       const body = await request.json();
-      const token = env.GITHUB_TOKEN;
+      const token = (env.GITHUB_TOKEN || '').trim();
       if (!token) throw new Error('Worker not configured — GITHUB_TOKEN secret missing');
 
       // Diagnostic: verify token is working
@@ -141,8 +141,12 @@ export default {
         return new Response(JSON.stringify({
           contentsStatus: readResp.status,
           contentsMessage: readBody.message || null,
-          tokenBelongsTo: userBody.login || 'unknown',
-          tokenPrefix: token ? token.substring(0, 14) + '...' : null,
+          userStatus: userResp.status,
+          userMessage: userBody.message || null,
+          tokenBelongsTo: userBody.login || null,
+          tokenLength: token.length,
+          tokenPrefix: token.substring(0, 14) + '...',
+          tokenSuffix: '...' + token.substring(token.length - 4),
         }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
       }
 
