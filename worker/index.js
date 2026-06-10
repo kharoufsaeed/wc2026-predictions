@@ -127,13 +127,23 @@ export default {
 
       // Diagnostic: verify token is working
       if (body.action === 'ping') {
-        const resp = await fetch(`${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}`, {
+        // Test the exact endpoint the Worker uses: read a known file
+        const readResp = await fetch(
+          `${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/contents/data/pools.json?ref=${BRANCH}`,
+          { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' } }
+        );
+        const readBody = await readResp.json().catch(() => ({}));
+        // Also test user identity
+        const userResp = await fetch(`${GITHUB_API}/user`, {
           headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' },
         });
-        const info = await resp.json().catch(() => ({}));
-        return new Response(JSON.stringify({ status: resp.status, message: info.message || 'no message', body: info, hasToken: !!token, tokenPrefix: token ? token.substring(0, 10) + '...' : null }), {
-          status: 200, headers: { ...CORS, 'Content-Type': 'application/json' },
-        });
+        const userBody = await userResp.json().catch(() => ({}));
+        return new Response(JSON.stringify({
+          contentsStatus: readResp.status,
+          contentsMessage: readBody.message || null,
+          tokenBelongsTo: userBody.login || 'unknown',
+          tokenPrefix: token ? token.substring(0, 14) + '...' : null,
+        }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
       }
 
       let result;
