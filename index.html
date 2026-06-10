@@ -3,9 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'none';
+    script-src 'self' 'unsafe-inline';
+    style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline';
+    font-src https://cdn.jsdelivr.net;
+    img-src 'self' data:;
+    connect-src 'self' https://api.github.com;
+    base-uri 'self';
+    form-action 'self';
+    frame-ancestors 'none';
+  ">
   <title>FIFA World Cup 2026 - Prediction Competition</title>
   <link rel="stylesheet" href="assets/style.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.0.0/css/flag-icons.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.0.0/css/flag-icons.min.css"
+        integrity="sha384-aQuvIWWIbpu/mSqULLDiUveyYiPoJzPKAWjUmGJ+Elm+N/LJhzfZqsutsfw870JS"
+        crossorigin="anonymous">
 </head>
 <body>
   <!-- Banner -->

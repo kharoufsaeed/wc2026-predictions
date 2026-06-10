@@ -119,9 +119,10 @@ const App = {
   // Auth
   async login() {
     const comp = document.getElementById('login-competition').value;
-    const name = document.getElementById('login-name').value.trim();
+    const rawName = document.getElementById('login-name').value.trim();
+    const name = rawName.replace(/[^a-zA-Z0-9 _\-'.]/g, '').trim();
     const pass = document.getElementById('login-password')?.value || '';
-    if (!name) return alert('Please enter your name');
+    if (!name) return alert('Please enter your name (letters, numbers, spaces, - _ \' . only)');
 
     // Admin check
     if (name.toLowerCase() === 'admin') {
