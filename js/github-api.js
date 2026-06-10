@@ -3,12 +3,12 @@
 
 const GitHubAPI = {
   // CONFIGURE THESE after creating your repo:
-  OWNER: 'skharouf',
+  OWNER: 'kharoufsaeed',
   REPO: 'wc2026-predictions',
   BRANCH: 'main',
   TOKEN: '', // Set via Settings modal - stored in localStorage
   // GitHub Enterprise base URL (use 'https://api.github.com' for public GitHub)
-  API_BASE: 'https://github.qualcomm.com/api/v3',
+  API_BASE: 'https://api.github.com',
 
   // Data file paths in the repo
   PATHS: {
