@@ -127,26 +127,23 @@ export default {
 
       // Diagnostic: verify token is working
       if (body.action === 'ping') {
-        // Test the exact endpoint the Worker uses: read a known file
-        const readResp = await fetch(
-          `${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/contents/data/pools.json?ref=${BRANCH}`,
-          { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' } }
-        );
-        const readBody = await readResp.json().catch(() => ({}));
-        // Also test user identity
-        const userResp = await fetch(`${GITHUB_API}/user`, {
+        // Test rate_limit — works for both authed and unauthed, reveals if token is received
+        const rlResp = await fetch(`${GITHUB_API}/rate_limit`, {
+          headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' },
+        });
+        const rlBody = await rlResp.json().catch(() => ({}));
+        // Unauthed limit is 60/hr, authed is 5000/hr
+        const coreLimit = rlBody.resources?.core?.limit;
+        // Also try with Bearer prefix
+        const rlResp2 = await fetch(`${GITHUB_API}/rate_limit`, {
           headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' },
         });
-        const userBody = await userResp.json().catch(() => ({}));
+        const rlBody2 = await rlResp2.json().catch(() => ({}));
         return new Response(JSON.stringify({
-          contentsStatus: readResp.status,
-          contentsMessage: readBody.message || null,
-          userStatus: userResp.status,
-          userMessage: userBody.message || null,
-          tokenBelongsTo: userBody.login || null,
+          tokenPrefix: `token` + ': status=' + rlResp.status + ' limit=' + coreLimit,
+          bearerPrefix: `Bearer` + ': status=' + rlResp2.status + ' limit=' + rlBody2.resources?.core?.limit,
           tokenLength: token.length,
-          tokenPrefix: token.substring(0, 14) + '...',
-          tokenSuffix: '...' + token.substring(token.length - 4),
+          note: 'authed=5000/hr, unauthed=60/hr',
         }), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } });
       }
 
