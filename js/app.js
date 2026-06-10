@@ -716,6 +716,9 @@ const App = {
 
 // Initialize on load
 window.addEventListener('DOMContentLoaded', () => {
+  // Pick up participant token from ?t= URL param if present
+  PlayerAPI.initToken();
+
   // Migrate any token previously stored in localStorage to sessionStorage, then remove it
   const legacyToken = localStorage.getItem('wc2026_github_token');
   if (legacyToken) {

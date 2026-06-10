@@ -1,18 +1,35 @@
 // PlayerAPI — writes user predictions directly to GitHub.
 //
-// PARTICIPANT_TOKEN: fine-grained PAT with Contents: Read & Write on this repo only.
-// Risk if extracted: someone could submit or edit predictions in this game.
-// The admin token (results, pool management) is separate and lives only in admin.html.
+// Token delivery: admin shares a join link containing the token as a URL parameter,
+// e.g. https://kharoufsaeed.github.io/wc2026-predictions/?t=github_pat_...
+// The app stores it in sessionStorage and removes it from the URL immediately.
+// The token never appears in committed code.
 const PlayerAPI = {
   GITHUB_API: 'https://api.github.com',
   OWNER: 'kharoufsaeed',
   REPO: 'wc2026-predictions-data',
   BRANCH: 'main',
-  PARTICIPANT_TOKEN: 'PASTE_PARTICIPANT_TOKEN_HERE',
+
+  _token() {
+    return sessionStorage.getItem('wc2026_pt') || '';
+  },
+
+  // Called once on page load — picks up ?t=TOKEN from URL, stores in sessionStorage
+  initToken() {
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get('t');
+    if (t) {
+      sessionStorage.setItem('wc2026_pt', t);
+      // Strip token from URL so it doesn't linger in browser history
+      params.delete('t');
+      const clean = params.toString() ? '?' + params.toString() : window.location.pathname;
+      history.replaceState(null, '', clean);
+    }
+  },
 
   _headers() {
     return {
-      'Authorization': `token ${this.PARTICIPANT_TOKEN}`,
+      'Authorization': `token ${this._token()}`,
       'Accept': 'application/vnd.github.v3+json',
       'Content-Type': 'application/json',
     };
@@ -77,6 +94,6 @@ const PlayerAPI = {
   },
 
   isReady() {
-    return this.PARTICIPANT_TOKEN !== 'PASTE_PARTICIPANT_TOKEN_HERE';
+    return !!this._token();
   },
 };
