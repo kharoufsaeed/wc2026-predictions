@@ -20,10 +20,11 @@ const ALLOWED_ORIGIN = 'https://kharoufsaeed.github.io';
 
 // ── GitHub helpers ────────────────────────────────────────────────────────────
 
-async function ghRead(path, token) {
+async function ghRead(path) {
+  // Public repo — no token needed for reads
   const resp = await fetch(
     `${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}?ref=${BRANCH}`,
-    { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' } }
+    { headers: { Accept: 'application/vnd.github.v3+json' } }
   );
   if (resp.status === 404) return { data: null, sha: null };
   if (!resp.ok) throw new Error(`GitHub read ${resp.status}: ${path}`);
@@ -58,7 +59,7 @@ async function ghWrite(path, data, sha, message, token) {
 async function handleJoin({ pool, player }, token) {
   if (!pool || !player) throw new Error('Missing pool or player');
   const path = `data/${pool}/members.json`;
-  const { data, sha } = await ghRead(path, token);
+  const { data, sha } = await ghRead(path);
   const members = Array.isArray(data) ? data : [];
   if (!members.map(m => m.toLowerCase()).includes(player.toLowerCase())) {
     members.push(player);
@@ -70,7 +71,7 @@ async function handleJoin({ pool, player }, token) {
 async function handlePrediction({ pool, player, matchId, prediction }, token) {
   if (!pool || !player || !matchId || !prediction) throw new Error('Missing required fields');
   const path = `data/${pool}/predictions.json`;
-  const { data, sha } = await ghRead(path, token);
+  const { data, sha } = await ghRead(path);
   const all = data || {};
   if (!all[player]) all[player] = {};
   all[player][matchId] = { ...prediction, timestamp: new Date().toISOString() };
@@ -81,7 +82,7 @@ async function handlePrediction({ pool, player, matchId, prediction }, token) {
 async function handleGeneral({ pool, player, predictions }, token) {
   if (!pool || !player || !predictions) throw new Error('Missing required fields');
   const path = `data/${pool}/general.json`;
-  const { data, sha } = await ghRead(path, token);
+  const { data, sha } = await ghRead(path);
   const all = data || {};
   all[player] = { ...predictions, timestamp: new Date().toISOString() };
   await ghWrite(path, all, sha, `General: ${player} – ${pool}`, token);
