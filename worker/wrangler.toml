@@ -1,0 +1,7 @@
+name = "wc2026-predictions-api"
+main = "index.js"
+compatibility_date = "2024-09-23"
+
+# After deploying, your Worker URL will be:
+# https://wc2026-predictions-api.<your-subdomain>.workers.dev
+# Paste that URL into js/player-api.js as WORKER_URL.

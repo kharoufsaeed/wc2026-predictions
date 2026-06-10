@@ -9,7 +9,7 @@
     style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline';
     font-src https://cdn.jsdelivr.net;
     img-src 'self' data:;
-    connect-src 'self' https://api.github.com;
+    connect-src 'self' https://api.github.com https://*.workers.dev;
     base-uri 'self';
     form-action 'self';
     frame-ancestors 'none';
@@ -132,6 +132,7 @@
   <script src="js/matches.js"></script>
   <script src="js/players.js"></script>
   <script src="js/github-api.js"></script>
+  <script src="js/player-api.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

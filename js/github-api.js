@@ -32,11 +32,10 @@ const GitHubAPI = {
   },
 
   headers() {
-    return {
-      'Authorization': `Bearer ${this.getToken()}`,
-      'Accept': 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json',
-    };
+    const h = { 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
+    const token = this.getToken();
+    if (token) h['Authorization'] = `Bearer ${token}`;
+    return h;
   },
 
   // Read a JSON file from the repo

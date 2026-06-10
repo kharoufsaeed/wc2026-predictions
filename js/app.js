@@ -89,19 +89,16 @@ const App = {
     if (!name) return alert('Please enter your name (letters, numbers, spaces, - _ \' . only)');
     if (!comp) return alert('Please select a competition pool');
 
-    // Prevent duplicate names in same browser (case-insensitive)
-    const registeredNames = JSON.parse(localStorage.getItem(`wc2026_${comp}_registered`) || '[]');
-    const nameLower = name.toLowerCase();
-    if (registeredNames.length > 0 && !registeredNames.includes(nameLower)) {
-      registeredNames.push(nameLower);
-      localStorage.setItem(`wc2026_${comp}_registered`, JSON.stringify(registeredNames));
-    } else if (registeredNames.length === 0) {
-      localStorage.setItem(`wc2026_${comp}_registered`, JSON.stringify([nameLower]));
-    }
     this.currentCompetition = comp;
     LocalStorage.setCompetition(comp);
     this.playerName = name;
     LocalStorage.setPlayerName(name);
+
+    // Register member in GitHub via the Worker (no token needed in browser)
+    if (PlayerAPI.isReady()) {
+      PlayerAPI.join(comp, name); // fire-and-forget — don't block UI
+    }
+
     this.showApp();
   },
 
@@ -318,12 +315,11 @@ const App = {
       totalPitchInvaders: document.getElementById('gen-invaders').value,
     };
     LocalStorage.saveGeneralPredictions(predictions);
-    // Sync to GitHub if configured
-    if (GitHubAPI.isConfigured()) {
-      const status = document.getElementById('general-sync-status');
-      status.textContent = 'Syncing to GitHub...';
-      const result = await GitHubAPI.submitGeneralPredictions(this.playerName, predictions);
-      status.textContent = result.success ? 'Saved & synced!' : 'Saved locally (sync failed)';
+    const status = document.getElementById('general-sync-status');
+    if (PlayerAPI.isReady()) {
+      status.textContent = 'Syncing...';
+      const result = await PlayerAPI.general(this.currentCompetition, this.playerName, predictions);
+      status.textContent = result.success ? 'Saved!' : 'Saved locally (sync failed)';
       setTimeout(() => status.textContent = '', 3000);
     }
     this.renderGeneralPredictions();
@@ -504,8 +500,8 @@ const App = {
       return alert('Please enter a score prediction');
     }
     LocalStorage.savePrediction(matchId, prediction);
-    if (GitHubAPI.isConfigured()) {
-      await GitHubAPI.submitPrediction(this.playerName, matchId, prediction);
+    if (PlayerAPI.isReady()) {
+      PlayerAPI.prediction(this.currentCompetition, this.playerName, matchId, prediction);
     }
     this._expandedMatch = null;
     this.renderMatches();
