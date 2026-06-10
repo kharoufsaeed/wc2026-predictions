@@ -70,8 +70,15 @@ const App = {
     try {
       const { data } = await GitHubAPI.readFile('data/pools.json');
       pools = Array.isArray(data) ? data : [];
-    } catch { pools = []; }
-    if (pools.length === 0) pools = ['work', 'friends']; // fallback
+      console.log('Loaded pools from', GitHubAPI.REPO + ':', pools);
+    } catch (e) {
+      console.error('Failed to read pools.json:', e);
+      pools = [];
+    }
+    if (pools.length === 0) {
+      console.log('No pools found, using fallback');
+      pools = ['work', 'friends'];
+    }
     select.innerHTML = '<option value="" disabled selected>Choose competition...</option>';
     pools.forEach(comp => {
       const opt = document.createElement('option');
