@@ -21,20 +21,24 @@ const ALLOWED_ORIGIN = 'https://kharoufsaeed.github.io';
 // ── GitHub helpers ────────────────────────────────────────────────────────────
 
 async function ghRead(path, token) {
-  const headers = { Accept: 'application/vnd.github.v3+json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const resp = await fetch(
-    `${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}?ref=${BRANCH}`,
-    { headers }
+  // Use raw URL for reads — works without auth on public repos, no IP restrictions
+  const rawResp = await fetch(
+    `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BRANCH}/${path}`,
+    { headers: { 'Cache-Control': 'no-cache' } }
   );
-  if (resp.status === 404) return { data: null, sha: null };
-  if (!resp.ok) {
-    const body = await resp.json().catch(() => ({}));
-    throw new Error(`GitHub read ${resp.status}: ${body.message || path}`);
-  }
-  const file = await resp.json();
-  return { data: JSON.parse(atob(file.content.replace(/\n/g, ''))), sha: file.sha };
+  if (rawResp.status === 404) return { data: null, sha: null };
+  if (!rawResp.ok) throw new Error(`GitHub read ${rawResp.status}: ${path}`);
+  const data = await rawResp.json();
+
+  // SHA is needed for writes — fetch via API with token
+  const metaResp = await fetch(
+    `${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}?ref=${BRANCH}`,
+    { headers: { Accept: 'application/vnd.github.v3+json', Authorization: `Bearer ${token}` } }
+  );
+  const sha = metaResp.ok ? (await metaResp.json()).sha : null;
+  return { data, sha };
 }
+
 
 async function ghWrite(path, data, sha, message, token) {
   const body = { message, content: btoa(JSON.stringify(data, null, 2)), branch: BRANCH };
@@ -120,6 +124,17 @@ export default {
       const body = await request.json();
       const token = env.GITHUB_TOKEN;
       if (!token) throw new Error('Worker not configured — GITHUB_TOKEN secret missing');
+
+      // Diagnostic: verify token is working
+      if (body.action === 'ping') {
+        const resp = await fetch(`${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}`, {
+          headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.v3+json' },
+        });
+        const info = await resp.json().catch(() => ({}));
+        return new Response(JSON.stringify({ status: resp.status, message: info.message || 'ok', hasToken: !!token }), {
+          status: 200, headers: { ...CORS, 'Content-Type': 'application/json' },
+        });
+      }
 
       let result;
       switch (body.action) {
