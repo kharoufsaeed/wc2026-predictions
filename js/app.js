@@ -6,14 +6,6 @@ function escapeHTML(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
 }
 
-// Hash a password using SHA-256 (browser-native, no library needed)
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
 // Helper: render flag icon from ISO code
 function flagIcon(isoCode) {
   return `<span class="fi fi-${isoCode}"></span>`;
@@ -51,9 +43,6 @@ const App = {
   currentTab: 'general',
   currentCompetition: null,
   playerName: null,
-  isAdmin: false,
-  // SHA-256 hash of admin password — never store the plaintext password here
-  ADMIN_PASS_HASH: '29d2b94788fdb796b2be6d3fdf660484799d3717b8248b8c64cd89ebd8146db8',
   timezone: 'CT',
   syncStatus: 'idle', // idle, syncing, error
 
@@ -68,12 +57,6 @@ const App = {
     if (savedComp && savedName) {
       this.currentCompetition = savedComp;
       this.playerName = savedName;
-      this.isAdmin = false; // admin status always requires password re-entry
-      // Force admin to re-authenticate on page load
-      if (savedName.toLowerCase() === 'admin') {
-        LocalStorage.clearPlayer();
-        return;
-      }
       document.getElementById('login-competition').value = savedComp;
       this.showApp();
     }
@@ -121,46 +104,20 @@ const App = {
     const comp = document.getElementById('login-competition').value;
     const rawName = document.getElementById('login-name').value.trim();
     const name = rawName.replace(/[^a-zA-Z0-9 _\-'.]/g, '').trim();
-    const pass = document.getElementById('login-password')?.value || '';
     if (!name) return alert('Please enter your name (letters, numbers, spaces, - _ \' . only)');
+    if (!comp) return alert('Please select a competition pool');
 
-    // Admin check
-    if (name.toLowerCase() === 'admin') {
-      const enteredHash = await hashPassword(pass);
-      if (enteredHash !== this.ADMIN_PASS_HASH) {
-        return alert('Invalid admin password');
-      }
-      this.isAdmin = true;
-      // Admin doesn't need a pool — default to first available
-      const comps = this.getCompetitions();
-      this.currentCompetition = comp || comps[0] || 'work';
-      LocalStorage.setCompetition(this.currentCompetition);
-    } else {
-      if (!comp) return alert('Please select a competition pool');
-      this.isAdmin = false;
-      // Check username uniqueness — a name belongs to whoever used it first
-      const existingPlayer = localStorage.getItem(`wc2026_${comp}_player`);
-      if (existingPlayer && existingPlayer.toLowerCase() !== name.toLowerCase()) {
-        if (GitHubAPI.isConfigured()) {
-          const predData = await GitHubAPI.readFile(`data/${comp}/predictions.json`);
-          if (predData.data && predData.data[name] !== undefined) {
-            // Name exists in predictions — allow (they're returning)
-          }
-        }
-      }
-      // Prevent duplicate names in same browser (case-insensitive)
-      const registeredNames = JSON.parse(localStorage.getItem(`wc2026_${comp}_registered`) || '[]');
-      const nameLower = name.toLowerCase();
-      if (registeredNames.length > 0 && !registeredNames.includes(nameLower)) {
-        registeredNames.push(nameLower);
-        localStorage.setItem(`wc2026_${comp}_registered`, JSON.stringify(registeredNames));
-      } else if (registeredNames.length === 0) {
-        localStorage.setItem(`wc2026_${comp}_registered`, JSON.stringify([nameLower]));
-      }
-      this.currentCompetition = comp;
-      LocalStorage.setCompetition(comp);
+    // Prevent duplicate names in same browser (case-insensitive)
+    const registeredNames = JSON.parse(localStorage.getItem(`wc2026_${comp}_registered`) || '[]');
+    const nameLower = name.toLowerCase();
+    if (registeredNames.length > 0 && !registeredNames.includes(nameLower)) {
+      registeredNames.push(nameLower);
+      localStorage.setItem(`wc2026_${comp}_registered`, JSON.stringify(registeredNames));
+    } else if (registeredNames.length === 0) {
+      localStorage.setItem(`wc2026_${comp}_registered`, JSON.stringify([nameLower]));
     }
-
+    this.currentCompetition = comp;
+    LocalStorage.setCompetition(comp);
     this.playerName = name;
     LocalStorage.setPlayerName(name);
     this.showApp();
@@ -169,7 +126,6 @@ const App = {
   logout() {
     LocalStorage.clearPlayer();
     this.playerName = null;
-    this.isAdmin = false;
     this.showLogin();
   },
 
@@ -179,9 +135,6 @@ const App = {
     document.querySelector('.nav').style.display = 'block';
     document.getElementById('user-info').style.display = 'flex';
     document.getElementById('player-name-display').textContent = this.playerName;
-    // Show/hide admin tab
-    const adminTab = document.querySelector('.nav-tab[data-tab="admin"]');
-    if (adminTab) adminTab.style.display = this.isAdmin ? '' : 'none';
     this.renderCurrentTab();
   },
 
@@ -237,7 +190,7 @@ const App = {
       case 'leaderboard': this.renderLeaderboard(); break;
       case 'bracket': this.renderBracket(); break;
       case 'rules': this.renderRules(); break;
-      case 'admin': this.renderAdmin(); break;
+      case 'settings': this.renderSettings(); break;
     }
   },
 
@@ -250,19 +203,16 @@ const App = {
 
   renderGeneralPredictions() {
     const container = document.getElementById('general-container');
-    const isAdmin = this.isAdmin;
-    const saved = isAdmin ? {} : LocalStorage.getGeneralPredictions();
+    const saved = LocalStorage.getGeneralPredictions();
     const hasSaved = Object.keys(saved).length > 0;
-    const locked = !isAdmin && this.isGeneralLocked();
+    const locked = this.isGeneralLocked();
     const disabledAttr = locked ? 'disabled' : '';
 
-    const title = isAdmin ? 'General Tournament — Actual Results' : 'General Tournament Predictions';
-    const desc = isAdmin
-      ? 'Enter the actual tournament results to score all players\' general predictions.'
-      : 'Make your tournament-wide predictions before the first match kicks off. These are worth big points!';
+    const title = 'General Tournament Predictions';
+    const desc = 'Make your tournament-wide predictions before the first match kicks off. These are worth big points!';
     const lockBanner = locked ? `<div class="lock-banner">🔒 Locked — Tournament has started. General predictions can no longer be changed.</div>` : '';
-    const saveFunc = isAdmin ? 'saveGeneralResults' : 'saveGeneralPredictions';
-    const btnLabel = isAdmin ? 'Submit Actual Results' : 'Save Predictions';
+    const saveFunc = 'saveGeneralPredictions';
+    const btnLabel = 'Save Predictions';
 
     container.innerHTML = `
       <h2>${title}</h2>
@@ -398,32 +348,6 @@ const App = {
     this.renderGeneralPredictions();
   },
 
-  async saveGeneralResults() {
-    const results = {
-      topScorer: document.getElementById('gen-topscorer').value,
-      bestPlayer: document.getElementById('gen-bestplayer').value,
-      bestGoalkeeper: document.getElementById('gen-goalkeeper').value,
-      fairPlayTeam: document.getElementById('gen-fairplay').value,
-      mostCleanSheets: document.getElementById('gen-cleansheets').value,
-      fastestGoalTeam: document.getElementById('gen-fastestgoal').value,
-      totalYellowCards: document.getElementById('gen-yellows').value,
-      totalRedCards: document.getElementById('gen-reds').value,
-      totalGoals: document.getElementById('gen-totalgoals').value,
-      totalCorners: document.getElementById('gen-corners').value,
-      totalPenalties: document.getElementById('gen-penalties').value,
-      totalPitchInvaders: document.getElementById('gen-invaders').value,
-    };
-    const status = document.getElementById('general-sync-status');
-    if (GitHubAPI.isConfigured()) {
-      status.textContent = 'Submitting actual results...';
-      const res = await GitHubAPI.submitGeneralResults(results);
-      status.textContent = res.success ? 'Actual results submitted!' : 'Error: ' + res.error;
-    } else {
-      status.textContent = 'Configure GitHub first to submit results.';
-    }
-    setTimeout(() => { if (status) status.textContent = ''; }, 3000);
-  },
-
   // ===== MATCHES =====
   matchGroupFilter: 'all',
 
@@ -494,8 +418,7 @@ const App = {
   renderMatchCard(match) {
     const home = TEAMS[match.home];
     const away = TEAMS[match.away];
-    const isAdmin = this.isAdmin;
-    const pred = isAdmin ? null : LocalStorage.getPrediction(match.id);
+    const pred = LocalStorage.getPrediction(match.id);
     const predClass = pred ? 'has-prediction' : '';
     const expanded = this._expandedMatch === match.id;
 
@@ -524,17 +447,13 @@ const App = {
         </div>
       </div>`;
     } else {
-      const label = isAdmin ? 'Click to enter result' : 'Click to predict';
-      cardHtml += `<div class="prediction-badge empty">${label}</div>`;
+      cardHtml += `<div class="prediction-badge empty">Click to predict</div>`;
     }
     cardHtml += '</div>'; // close match-card-header
 
     // Inline form (shown when expanded)
     if (expanded) {
-      const saveFunc = isAdmin ? 'saveInlineResult' : 'saveInlinePrediction';
-      const title = isAdmin ? 'Enter Actual Result' : '';
       cardHtml += `<div class="match-pred-inline">
-        ${title ? `<strong style="color:var(--accent);">${title}</strong>` : ''}
         <div class="score-row">
           <div class="score-input">
             <label>${home.code}</label>
@@ -574,7 +493,7 @@ const App = {
             </select>
           </div>
         </div>
-        <button class="btn btn-primary" onclick="App.${saveFunc}('${match.id}')">${isAdmin ? 'Submit Result' : 'Save'}</button>
+        <button class="btn btn-primary" onclick="App.saveInlinePrediction('${match.id}')">Save</button>
         <button class="btn btn-secondary" onclick="App.toggleMatchPrediction(null)">Cancel</button>
         <span id="inline-status-${match.id}"></span>
       </div>`;
@@ -609,29 +528,6 @@ const App = {
     }
     this._expandedMatch = null;
     this.renderMatches();
-  },
-
-  async saveInlineResult(matchId) {
-    const result = {
-      homeScore: document.getElementById(`pred-home-${matchId}`).value,
-      awayScore: document.getElementById(`pred-away-${matchId}`).value,
-      manOfMatch: document.getElementById(`pred-motm-${matchId}`).value,
-      firstGoalScorer: document.getElementById(`pred-fgs-${matchId}`).value,
-      totalCards: document.getElementById(`pred-cards-${matchId}`).value,
-      bothTeamsScore: document.getElementById(`pred-bts-${matchId}`).value,
-    };
-    if (result.homeScore === '' || result.awayScore === '') {
-      return alert('Please enter the match score');
-    }
-    const status = document.getElementById(`inline-status-${matchId}`);
-    if (GitHubAPI.isConfigured()) {
-      if (status) status.textContent = ' Submitting...';
-      const res = await GitHubAPI.submitResult(matchId, result);
-      if (status) status.textContent = res.success ? ' Submitted!' : ' Error: ' + res.error;
-    } else {
-      if (status) status.textContent = ' Configure GitHub first.';
-    }
-    setTimeout(() => { this._expandedMatch = null; this.renderMatches(); }, 1000);
   },
 
   // ===== STANDINGS =====
@@ -692,17 +588,7 @@ const App = {
     const selectedPool = this.leaderboardPool || this.currentCompetition;
     const poolName = selectedPool.charAt(0).toUpperCase() + selectedPool.slice(1);
 
-    // Admin pool selector
-    let poolSelector = '';
-    if (this.isAdmin) {
-      const comps = this.getCompetitions();
-      poolSelector = `<div class="pool-selector">
-        <label>View pool:</label>
-        <select onchange="App.leaderboardPool=this.value; App.renderLeaderboard()">
-          ${comps.map(c => `<option value="${c}" ${c === selectedPool ? 'selected' : ''}>${c.charAt(0).toUpperCase() + c.slice(1)}</option>`).join('')}
-        </select>
-      </div>`;
-    }
+    const poolSelector = '';
 
     container.innerHTML = `<h2>Leaderboard — ${poolName} Pool</h2>${poolSelector}<p>Loading...</p>`;
 
@@ -849,155 +735,31 @@ const App = {
       </div>`;
   },
 
-  // ===== ADMIN =====
-  renderAdmin() {
-    const container = document.getElementById('admin-container');
-    if (!this.isAdmin) {
-      container.innerHTML = '<h2>Access Denied</h2><p>Admin access required.</p>';
-      return;
-    }
+  // ===== SETTINGS (GitHub token config for regular users) =====
+  renderSettings() {
+    const container = document.getElementById('settings-container');
     container.innerHTML = `
-      <h2>Admin Panel</h2>
+      <h2>Settings</h2>
       <div class="admin-section">
-        <h3>GitHub Configuration</h3>
-        <p class="section-desc">Configure your GitHub repo to enable shared predictions and leaderboard.</p>
+        <h3>GitHub Sync</h3>
+        <p class="section-desc">Configure your GitHub token to sync predictions and see the live leaderboard. Ask the competition organiser for the token.</p>
         <div class="admin-config">
           <div class="pred-field">
-            <label>GitHub Username</label>
-            <input type="text" id="cfg-owner" placeholder="your-username" value="${GitHubAPI.OWNER !== 'YOUR_GITHUB_USERNAME' ? GitHubAPI.OWNER : ''}">
-          </div>
-          <div class="pred-field">
-            <label>Repository Name</label>
-            <input type="text" id="cfg-repo" placeholder="wc2026-predictions" value="${GitHubAPI.REPO}">
-          </div>
-          <div class="pred-field">
             <label>Personal Access Token</label>
-            <input type="password" id="cfg-token" placeholder="${GitHubAPI.isConfigured() ? '(token saved — enter new one to replace)' : 'ghp_xxxxxxxxxxxx'}">
-            <span class="points-hint">Fine-grained token with repo contents read/write</span>
+            <input type="password" id="cfg-token" placeholder="${GitHubAPI.isConfigured() ? '(token saved — enter new one to replace)' : 'github_pat_...'}">
+            <span class="points-hint">Read/write token provided by the organiser</span>
           </div>
-          <button class="btn btn-primary" onclick="App.saveGitHubConfig()">Save Configuration</button>
+          <button class="btn btn-primary" onclick="App.saveGitHubConfig()">Save</button>
           <button class="btn btn-secondary" onclick="App.testGitHubConnection()">Test Connection</button>
           <div id="config-status"></div>
         </div>
-      </div>
-      <div class="admin-section">
-        <h3>Manage Pools</h3>
-        <p class="section-desc">Add, rename, or remove pools and manage their members.</p>
-        <div class="pool-add-row">
-          <input type="text" class="comp-input" id="admin-new-pool-name" placeholder="New pool name">
-          <button class="btn btn-primary btn-small" onclick="App.addPoolFromAdmin()">+ Add Pool</button>
-        </div>
-        <div id="pool-manage-list">
-          ${this.getCompetitions().map(c => {
-            const members = this.getPoolMembers(c);
-            return `
-            <div class="pool-card">
-              <div class="pool-rename-row">
-                <span class="pool-current-name">${c.charAt(0).toUpperCase() + c.slice(1)}</span>
-                <input type="text" class="comp-input" id="pool-rename-${c}" placeholder="New name" value="${c}">
-                <button class="btn btn-secondary btn-small" onclick="App.renamePool('${c}')">Rename</button>
-                <button class="btn btn-danger btn-small" onclick="App.removePool('${c}')">Remove</button>
-              </div>
-              <div class="members-section">
-                <strong>Members (${members.length}):</strong>
-                <div class="members-list">
-                  ${members.length === 0 ? '<span class="no-members">No members yet</span>' :
-                    members.map(m => `<span class="member-chip">${escapeHTML(m)} <button class="chip-remove" data-pool="${escapeHTML(c)}" data-member="${escapeHTML(m)}" onclick="App.removeMember(this.dataset.pool,this.dataset.member)" title="Remove">×</button></span>`).join('')}
-                </div>
-                <div class="member-add-row">
-                  <input type="text" class="comp-input" id="member-add-${c}" placeholder="Add member name">
-                  <button class="btn btn-secondary btn-small" onclick="App.addMember('${c}')">+ Add</button>
-                </div>
-              </div>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>
-      <div class="admin-section">
-        <h3>How to Enter Results</h3>
-        <p class="section-desc">Use the <strong>Matches</strong> tab to enter actual match results inline. Use the <strong>General Predictions</strong> tab to enter actual tournament-wide results.</p>
       </div>`;
   },
 
-  renamePool(oldName) {
-    const newName = document.getElementById(`pool-rename-${oldName}`)?.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (!newName || newName === oldName) return;
-    const comps = this.getCompetitions();
-    const idx = comps.indexOf(oldName);
-    if (idx === -1) return;
-    comps[idx] = newName;
-    this.saveCompetitions(comps);
-    if (this.currentCompetition === oldName) {
-      this.currentCompetition = newName;
-      LocalStorage.setCompetition(newName);
-    }
-    // Update login dropdown
-    this.populateCompetitionDropdown();
-    this.renderAdmin();
-  },
-
-  addPoolFromAdmin() {
-    const input = document.getElementById('admin-new-pool-name');
-    const name = input.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (!name) return alert('Enter a valid pool name');
-    const comps = this.getCompetitions();
-    if (comps.includes(name)) return alert('Pool already exists');
-    comps.push(name);
-    this.saveCompetitions(comps);
-    this.populateCompetitionDropdown();
-    this.renderAdmin();
-  },
-
-  removePool(poolName) {
-    const comps = this.getCompetitions();
-    if (comps.length <= 1) return alert('Cannot remove the last pool');
-    if (!confirm(`Remove pool "${poolName}"? This only removes it from your local list — data files in GitHub remain intact.`)) return;
-    const idx = comps.indexOf(poolName);
-    if (idx === -1) return;
-    comps.splice(idx, 1);
-    this.saveCompetitions(comps);
-    if (this.currentCompetition === poolName) {
-      this.currentCompetition = comps[0];
-      LocalStorage.setCompetition(comps[0]);
-    }
-    this.populateCompetitionDropdown();
-    this.renderAdmin();
-  },
-
-  getPoolMembers(pool) {
-    try {
-      return JSON.parse(localStorage.getItem(`wc2026_${pool}_registered`) || '[]');
-    } catch { return []; }
-  },
-
-  addMember(pool) {
-    const input = document.getElementById(`member-add-${pool}`);
-    const name = input.value.trim().toLowerCase();
-    if (!name) return;
-    const members = this.getPoolMembers(pool);
-    if (members.includes(name)) return alert('Member already in pool');
-    members.push(name);
-    localStorage.setItem(`wc2026_${pool}_registered`, JSON.stringify(members));
-    input.value = '';
-    this.renderAdmin();
-  },
-
-  removeMember(pool, name) {
-    const members = this.getPoolMembers(pool).filter(m => m !== name);
-    localStorage.setItem(`wc2026_${pool}_registered`, JSON.stringify(members));
-    this.renderAdmin();
-  },
-
   saveGitHubConfig() {
-    const owner = document.getElementById('cfg-owner').value.trim();
-    const repo = document.getElementById('cfg-repo').value.trim();
     const token = document.getElementById('cfg-token').value.trim();
-    if (owner) GitHubAPI.OWNER = owner;
-    if (repo) GitHubAPI.REPO = repo;
     if (token) GitHubAPI.setToken(token);
-    localStorage.setItem('wc2026_github_owner', owner);
-    localStorage.setItem('wc2026_github_repo', repo);
-    document.getElementById('config-status').textContent = 'Configuration saved!';
+    document.getElementById('config-status').textContent = token ? 'Token saved!' : 'Enter a token first.';
   },
 
   async testGitHubConnection() {
@@ -1040,10 +802,5 @@ window.addEventListener('DOMContentLoaded', () => {
     sessionStorage.setItem('wc2026_github_token', legacyToken);
     localStorage.removeItem('wc2026_github_token');
   }
-  // Restore GitHub config from localStorage
-  const savedOwner = localStorage.getItem('wc2026_github_owner');
-  const savedRepo = localStorage.getItem('wc2026_github_repo');
-  if (savedOwner) GitHubAPI.OWNER = savedOwner;
-  if (savedRepo) GitHubAPI.REPO = savedRepo;
   App.init();
 });
