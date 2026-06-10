@@ -1001,15 +1001,27 @@ const App = {
 
   async testGitHubConnection() {
     const status = document.getElementById('config-status');
+    // Read current input values so Test works without needing Save first
+    const owner = document.getElementById('cfg-owner').value.trim() || GitHubAPI.OWNER;
+    const repo = document.getElementById('cfg-repo').value.trim() || GitHubAPI.REPO;
+    const token = document.getElementById('cfg-token').value.trim() || GitHubAPI.getToken();
     status.textContent = 'Testing...';
+    status.style.color = '';
     try {
-      const url = `${GitHubAPI.API_BASE}/repos/${GitHubAPI.OWNER}/${GitHubAPI.REPO}`;
-      const resp = await fetch(url, { headers: GitHubAPI.headers() });
+      const url = `${GitHubAPI.API_BASE}/repos/${owner}/${repo}`;
+      const resp = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      });
       if (resp.ok) {
         status.textContent = 'Connected successfully!';
         status.style.color = 'green';
       } else {
-        status.textContent = `Error: ${resp.status} - Check your config`;
+        const body = await resp.json().catch(() => ({}));
+        const detail = body.message || resp.statusText || '';
+        status.textContent = `Error ${resp.status}: ${detail || 'Check owner, repo, and token'}`;
         status.style.color = 'red';
       }
     } catch (e) {

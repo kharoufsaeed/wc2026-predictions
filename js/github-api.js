@@ -33,7 +33,7 @@ const GitHubAPI = {
 
   headers() {
     return {
-      'Authorization': `token ${this.getToken()}`,
+      'Authorization': `Bearer ${this.getToken()}`,
       'Accept': 'application/vnd.github.v3+json',
       'Content-Type': 'application/json',
     };
