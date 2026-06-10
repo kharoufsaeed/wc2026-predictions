@@ -4,7 +4,7 @@
 const GitHubAPI = {
   // CONFIGURE THESE after creating your repo:
   OWNER: 'kharoufsaeed',
-  REPO: 'wc2026-predictions',
+  REPO: 'wc2026-predictions-data',
   BRANCH: 'main',
   TOKEN: '', // Set via Settings modal - stored in localStorage
   // GitHub Enterprise base URL (use 'https://api.github.com' for public GitHub)

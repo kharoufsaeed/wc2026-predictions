@@ -6,7 +6,7 @@
 const PlayerAPI = {
   GITHUB_API: 'https://api.github.com',
   OWNER: 'kharoufsaeed',
-  REPO: 'wc2026-predictions',
+  REPO: 'wc2026-predictions-data',
   BRANCH: 'main',
   PARTICIPANT_TOKEN: 'PASTE_PARTICIPANT_TOKEN_HERE',
 
