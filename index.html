@@ -85,7 +85,6 @@
       <button class="nav-tab" data-tab="leaderboard">Leaderboard</button>
       <button class="nav-tab" data-tab="bracket">Bracket</button>
       <button class="nav-tab" data-tab="rules">Scoring Rules</button>
-      <button class="nav-tab" data-tab="settings">Settings</button>
     </div>
   </nav>
 
@@ -98,10 +97,6 @@
         <select id="login-competition">
           <option value="" disabled selected>Choose competition...</option>
         </select>
-        <div class="competition-actions">
-          <input type="text" id="new-competition-name" placeholder="New pool name" class="comp-input">
-          <button class="btn btn-secondary btn-small" onclick="App.addCompetition()">+ Add</button>
-        </div>
       </div>
       <input type="text" id="login-name" placeholder="Your name" onkeypress="if(event.key==='Enter') App.login()">
       <button class="btn btn-primary" onclick="App.login()">Join Competition</button>
@@ -133,9 +128,6 @@
     </div>
   </main>
 
-    <div class="tab-content" id="tab-settings">
-      <div id="settings-container"></div>
-    </div>
   <!-- Scripts -->
   <script src="js/matches.js"></script>
   <script src="js/players.js"></script>

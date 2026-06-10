@@ -50,7 +50,7 @@ const App = {
     this.timezone = localStorage.getItem('wc2026_timezone') || 'CT';
     document.getElementById('tz-select').value = this.timezone;
     this.setupTabs();
-    this.populateCompetitionDropdown();
+    this.populateCompetitionDropdown(); // async — loads from GitHub
 
     const savedComp = LocalStorage.getCompetition();
     const savedName = localStorage.getItem(`wc2026_${savedComp}_player`);
@@ -62,36 +62,18 @@ const App = {
     }
   },
 
-  // Competition management
-  getCompetitions() {
-    try {
-      return JSON.parse(localStorage.getItem('wc2026_competitions') || '["work","friends"]');
-    } catch { return ['work', 'friends']; }
-  },
-
-  saveCompetitions(comps) {
-    localStorage.setItem('wc2026_competitions', JSON.stringify(comps));
-  },
-
-  addCompetition() {
-    const input = document.getElementById('new-competition-name');
-    const name = input.value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (!name) return;
-    const comps = this.getCompetitions();
-    if (!comps.includes(name)) {
-      comps.push(name);
-      this.saveCompetitions(comps);
-    }
-    input.value = '';
-    this.populateCompetitionDropdown();
-    document.getElementById('login-competition').value = name;
-  },
-
-  populateCompetitionDropdown() {
+  // Load pools from GitHub and populate the login dropdown
+  async populateCompetitionDropdown() {
     const select = document.getElementById('login-competition');
-    const comps = this.getCompetitions();
+    select.innerHTML = '<option value="" disabled selected>Loading pools...</option>';
+    let pools = [];
+    try {
+      const { data } = await GitHubAPI.readFile('data/pools.json');
+      pools = Array.isArray(data) ? data : [];
+    } catch { pools = []; }
+    if (pools.length === 0) pools = ['work', 'friends']; // fallback
     select.innerHTML = '<option value="" disabled selected>Choose competition...</option>';
-    comps.forEach(comp => {
+    pools.forEach(comp => {
       const opt = document.createElement('option');
       opt.value = comp;
       opt.textContent = comp.charAt(0).toUpperCase() + comp.slice(1);
@@ -190,7 +172,6 @@ const App = {
       case 'leaderboard': this.renderLeaderboard(); break;
       case 'bracket': this.renderBracket(); break;
       case 'rules': this.renderRules(); break;
-      case 'settings': this.renderSettings(); break;
     }
   },
 
@@ -735,63 +716,6 @@ const App = {
       </div>`;
   },
 
-  // ===== SETTINGS (GitHub token config for regular users) =====
-  renderSettings() {
-    const container = document.getElementById('settings-container');
-    container.innerHTML = `
-      <h2>Settings</h2>
-      <div class="admin-section">
-        <h3>GitHub Sync</h3>
-        <p class="section-desc">Configure your GitHub token to sync predictions and see the live leaderboard. Ask the competition organiser for the token.</p>
-        <div class="admin-config">
-          <div class="pred-field">
-            <label>Personal Access Token</label>
-            <input type="password" id="cfg-token" placeholder="${GitHubAPI.isConfigured() ? '(token saved — enter new one to replace)' : 'github_pat_...'}">
-            <span class="points-hint">Read/write token provided by the organiser</span>
-          </div>
-          <button class="btn btn-primary" onclick="App.saveGitHubConfig()">Save</button>
-          <button class="btn btn-secondary" onclick="App.testGitHubConnection()">Test Connection</button>
-          <div id="config-status"></div>
-        </div>
-      </div>`;
-  },
-
-  saveGitHubConfig() {
-    const token = document.getElementById('cfg-token').value.trim();
-    if (token) GitHubAPI.setToken(token);
-    document.getElementById('config-status').textContent = token ? 'Token saved!' : 'Enter a token first.';
-  },
-
-  async testGitHubConnection() {
-    const status = document.getElementById('config-status');
-    // Read current input values so Test works without needing Save first
-    const owner = document.getElementById('cfg-owner').value.trim() || GitHubAPI.OWNER;
-    const repo = document.getElementById('cfg-repo').value.trim() || GitHubAPI.REPO;
-    const token = document.getElementById('cfg-token').value.trim() || GitHubAPI.getToken();
-    status.textContent = 'Testing...';
-    status.style.color = '';
-    try {
-      const url = `${GitHubAPI.API_BASE}/repos/${owner}/${repo}`;
-      const resp = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.github.v3+json',
-        },
-      });
-      if (resp.ok) {
-        status.textContent = 'Connected successfully!';
-        status.style.color = 'green';
-      } else {
-        const body = await resp.json().catch(() => ({}));
-        const detail = body.message || resp.statusText || '';
-        status.textContent = `Error ${resp.status}: ${detail || 'Check owner, repo, and token'}`;
-        status.style.color = 'red';
-      }
-    } catch (e) {
-      status.textContent = `Connection failed: ${e.message}`;
-      status.style.color = 'red';
-    }
-  },
 };
 
 // Initialize on load
