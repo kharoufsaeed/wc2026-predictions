@@ -34,7 +34,7 @@ const GitHubAPI = {
   headers() {
     const h = { 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' };
     const token = this.getToken();
-    if (token) h['Authorization'] = `Bearer ${token}`;
+    if (token) h['Authorization'] = `token ${token}`;
     return h;
   },
 
