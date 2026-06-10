@@ -1,5 +1,19 @@
 // FIFA World Cup 2026 Prediction App - GitHub Backend Version
 
+// Escape HTML to prevent XSS when rendering user-controlled data into innerHTML
+function escapeHTML(str) {
+  if (typeof str !== 'string') return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+}
+
+// Hash a password using SHA-256 (browser-native, no library needed)
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 // Helper: render flag icon from ISO code
 function flagIcon(isoCode) {
   return `<span class="fi fi-${isoCode}"></span>`;
@@ -38,7 +52,8 @@ const App = {
   currentCompetition: null,
   playerName: null,
   isAdmin: false,
-  ADMIN_PASS: 'WC2026$xK9m!vR3pQ7z',
+  // SHA-256 hash of admin password — never store the plaintext password here
+  ADMIN_PASS_HASH: '29d2b94788fdb796b2be6d3fdf660484799d3717b8248b8c64cd89ebd8146db8',
   timezone: 'CT',
   syncStatus: 'idle', // idle, syncing, error
 
@@ -53,7 +68,12 @@ const App = {
     if (savedComp && savedName) {
       this.currentCompetition = savedComp;
       this.playerName = savedName;
-      this.isAdmin = (savedName.toLowerCase() === 'admin');
+      this.isAdmin = false; // admin status always requires password re-entry
+      // Force admin to re-authenticate on page load
+      if (savedName.toLowerCase() === 'admin') {
+        LocalStorage.clearPlayer();
+        return;
+      }
       document.getElementById('login-competition').value = savedComp;
       this.showApp();
     }
@@ -105,7 +125,8 @@ const App = {
 
     // Admin check
     if (name.toLowerCase() === 'admin') {
-      if (pass !== this.ADMIN_PASS) {
+      const enteredHash = await hashPassword(pass);
+      if (enteredHash !== this.ADMIN_PASS_HASH) {
         return alert('Invalid admin password');
       }
       this.isAdmin = true;
@@ -334,9 +355,9 @@ const App = {
 
   renderSavedGeneral(saved) {
     return `<div class="saved-general-grid">
-      <div class="saved-item"><strong>Top Scorer:</strong> ${saved.topScorer || '-'}</div>
-      <div class="saved-item"><strong>Best Player:</strong> ${saved.bestPlayer || '-'}</div>
-      <div class="saved-item"><strong>Best GK:</strong> ${saved.bestGoalkeeper || '-'}</div>
+      <div class="saved-item"><strong>Top Scorer:</strong> ${escapeHTML(saved.topScorer) || '-'}</div>
+      <div class="saved-item"><strong>Best Player:</strong> ${escapeHTML(saved.bestPlayer) || '-'}</div>
+      <div class="saved-item"><strong>Best GK:</strong> ${escapeHTML(saved.bestGoalkeeper) || '-'}</div>
       <div class="saved-item"><strong>Fair Play:</strong> ${saved.fairPlayTeam ? flagIcon(TEAMS[saved.fairPlayTeam]?.flag) + ' ' + saved.fairPlayTeam : '-'}</div>
       <div class="saved-item"><strong>Clean Sheets:</strong> ${saved.mostCleanSheets ? flagIcon(TEAMS[saved.mostCleanSheets]?.flag) + ' ' + saved.mostCleanSheets : '-'}</div>
       <div class="saved-item"><strong>Fastest Goal:</strong> ${saved.fastestGoalTeam ? flagIcon(TEAMS[saved.fastestGoalTeam]?.flag) + ' ' + saved.fastestGoalTeam : '-'}</div>
@@ -493,12 +514,12 @@ const App = {
     // Show saved prediction/result summary
     if (pred) {
       cardHtml += `<div class="match-pred-saved">
-        <span class="pred-score">${pred.homeScore} - ${pred.awayScore}</span>
+        <span class="pred-score">${parseInt(pred.homeScore, 10)} - ${parseInt(pred.awayScore, 10)}</span>
         <div class="pred-details">
-          ${pred.manOfMatch ? 'MOTM: ' + pred.manOfMatch : ''}
-          ${pred.firstGoalScorer ? ' | FGS: ' + pred.firstGoalScorer : ''}
-          ${pred.totalCards ? ' | Cards: ' + pred.totalCards : ''}
-          ${pred.bothTeamsScore ? ' | BTS: ' + pred.bothTeamsScore : ''}
+          ${pred.manOfMatch ? 'MOTM: ' + escapeHTML(pred.manOfMatch) : ''}
+          ${pred.firstGoalScorer ? ' | FGS: ' + escapeHTML(pred.firstGoalScorer) : ''}
+          ${pred.totalCards ? ' | Cards: ' + parseInt(pred.totalCards, 10) : ''}
+          ${pred.bothTeamsScore === 'yes' || pred.bothTeamsScore === 'no' ? ' | BTS: ' + pred.bothTeamsScore : ''}
         </div>
       </div>`;
     } else {
@@ -707,7 +728,7 @@ const App = {
         <tbody>`;
       leaderboard.forEach((entry, i) => {
         html += `<tr class="${entry.name === this.playerName ? 'current-player' : ''}">
-          <td>${i + 1}</td><td>${entry.name}</td><td><strong>${entry.points}</strong></td>
+          <td>${i + 1}</td><td>${escapeHTML(entry.name)}</td><td><strong>${entry.points}</strong></td>
           <td>${entry.exact}</td><td>${entry.correct}</td></tr>`;
       });
       html += '</tbody></table>';
@@ -880,7 +901,7 @@ const App = {
                 <strong>Members (${members.length}):</strong>
                 <div class="members-list">
                   ${members.length === 0 ? '<span class="no-members">No members yet</span>' :
-                    members.map(m => `<span class="member-chip">${m} <button class="chip-remove" onclick="App.removeMember('${c}','${m}')" title="Remove">×</button></span>`).join('')}
+                    members.map(m => `<span class="member-chip">${escapeHTML(m)} <button class="chip-remove" data-pool="${escapeHTML(c)}" data-member="${escapeHTML(m)}" onclick="App.removeMember(this.dataset.pool,this.dataset.member)" title="Remove">×</button></span>`).join('')}
                 </div>
                 <div class="member-add-row">
                   <input type="text" class="comp-input" id="member-add-${c}" placeholder="Add member name">
